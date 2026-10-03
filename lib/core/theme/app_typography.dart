@@ -8,4 +8,36 @@ abstract final class AppTypography {
       baseTextTheme,
     ).apply(bodyColor: defaultTextColor, displayColor: defaultTextColor);
   }
+
+  static TextStyle editorialSerif({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return GoogleFonts.newsreader(
+      fontSize: fontSize,
+      fontWeight: fontWeight ?? FontWeight.normal,
+      color: color,
+      letterSpacing: letterSpacing,
+      height: height,
+    );
+  }
+
+  static TextStyle sans({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
+    return GoogleFonts.lexend(
+      fontSize: fontSize,
+      fontWeight: fontWeight ?? FontWeight.normal,
+      color: color,
+      letterSpacing: letterSpacing,
+      height: height,
+    );
+  }
 }

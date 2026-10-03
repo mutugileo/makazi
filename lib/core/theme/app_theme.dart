@@ -7,18 +7,18 @@ import 'app_typography.dart';
 abstract final class AppTheme {
   static ThemeData get lightTheme {
     final colorScheme = ColorScheme.light(
-      primary: AppColors.teal700,
+      primary: AppColors.forestGreen,
       onPrimary: AppColors.pureWhite,
-      primaryContainer: AppColors.teal50,
-      onPrimaryContainer: AppColors.teal700,
-      secondary: AppColors.slate700,
-      onSecondary: AppColors.pureWhite,
-      surface: AppColors.pureWhite,
-      onSurface: AppColors.slate900,
-      surfaceContainerHighest: AppColors.slate100,
-      outline: AppColors.slate200,
-      outlineVariant: AppColors.slate100,
-      error: AppColors.rose600,
+      primaryContainer: AppColors.mintBackground,
+      onPrimaryContainer: AppColors.forestGreen,
+      secondary: AppColors.limeAccent,
+      onSecondary: AppColors.forestGreenDark,
+      surface: AppColors.cardBackground,
+      onSurface: AppColors.textPrimary,
+      surfaceContainerHighest: AppColors.pageBackground,
+      outline: AppColors.borderLight,
+      outlineVariant: AppColors.borderLight,
+      error: AppColors.actionNeededOrange,
       onError: AppColors.pureWhite,
     );
 
@@ -26,39 +26,27 @@ abstract final class AppTheme {
       useMaterial3: true,
       brightness: Brightness.light,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: AppColors.slate50,
-      textTheme: AppTypography.createTextTheme(AppColors.slate900),
+      scaffoldBackgroundColor: AppColors.pageBackground,
+      textTheme: AppTypography.createTextTheme(AppColors.textPrimary),
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.pureWhite,
-        foregroundColor: AppColors.slate900,
+        backgroundColor: AppColors.pageBackground,
+        foregroundColor: AppColors.textPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,
       ),
       cardTheme: CardThemeData(
-        color: AppColors.pureWhite,
+        color: AppColors.cardBackground,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          side: const BorderSide(color: AppColors.slate200),
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          side: const BorderSide(color: AppColors.borderLight),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         ),
         margin: EdgeInsets.zero,
       ),
       dividerTheme: const DividerThemeData(
-        color: AppColors.slate200,
+        color: AppColors.borderLight,
         thickness: 1,
         space: 1,
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColors.pureWhite,
-        indicatorColor: AppColors.teal100,
-        elevation: 0,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        iconTheme: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(color: AppColors.teal700);
-          }
-          return const IconThemeData(color: AppColors.slate500);
-        }),
       ),
       extensions: const <ThemeExtension<dynamic>>[
         AppSpacingThemeExtension.regular(),
@@ -69,18 +57,18 @@ abstract final class AppTheme {
 
   static ThemeData get darkTheme {
     final colorScheme = ColorScheme.dark(
-      primary: AppColors.teal600,
-      onPrimary: AppColors.pureWhite,
-      primaryContainer: AppColors.slate800,
-      onPrimaryContainer: AppColors.teal100,
-      secondary: AppColors.slate300,
-      onSecondary: AppColors.slate950,
-      surface: AppColors.slate900,
-      onSurface: AppColors.slate100,
-      surfaceContainerHighest: AppColors.slate800,
-      outline: AppColors.slate700,
-      outlineVariant: AppColors.slate800,
-      error: AppColors.rose600,
+      primary: AppColors.limeAccent,
+      onPrimary: AppColors.forestGreenDark,
+      primaryContainer: AppColors.forestGreenSurface,
+      onPrimaryContainer: AppColors.mintPillText,
+      secondary: AppColors.mintPillText,
+      onSecondary: AppColors.forestGreenDark,
+      surface: AppColors.forestGreenDark,
+      onSurface: AppColors.pureWhite,
+      surfaceContainerHighest: AppColors.forestGreenSurface,
+      outline: AppColors.forestGreenSurface,
+      outlineVariant: AppColors.forestGreenLight,
+      error: AppColors.actionNeededOrange,
       onError: AppColors.pureWhite,
     );
 
@@ -88,39 +76,27 @@ abstract final class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: AppColors.slate950,
-      textTheme: AppTypography.createTextTheme(AppColors.slate100),
+      scaffoldBackgroundColor: AppColors.forestGreenDark,
+      textTheme: AppTypography.createTextTheme(AppColors.pureWhite),
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.slate900,
-        foregroundColor: AppColors.slate100,
+        backgroundColor: AppColors.forestGreenDark,
+        foregroundColor: AppColors.pureWhite,
         elevation: 0,
         scrolledUnderElevation: 0,
       ),
       cardTheme: CardThemeData(
-        color: AppColors.slate900,
+        color: AppColors.forestGreenSurface,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          side: const BorderSide(color: AppColors.slate800),
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          side: const BorderSide(color: AppColors.forestGreenLight),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         ),
         margin: EdgeInsets.zero,
       ),
       dividerTheme: const DividerThemeData(
-        color: AppColors.slate800,
+        color: AppColors.forestGreenLight,
         thickness: 1,
         space: 1,
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColors.slate900,
-        indicatorColor: AppColors.slate800,
-        elevation: 0,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        iconTheme: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(color: AppColors.teal600);
-          }
-          return const IconThemeData(color: AppColors.slate400);
-        }),
       ),
       extensions: const <ThemeExtension<dynamic>>[
         AppSpacingThemeExtension.regular(),
