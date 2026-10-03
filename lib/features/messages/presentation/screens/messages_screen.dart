@@ -117,7 +117,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                 AppSpacing.md,
                 AppSpacing.xs,
                 AppSpacing.md,
-                AppSpacing.xxl + AppSpacing.lg,
+                84,
               ),
               child: Container(
                 padding: const EdgeInsets.symmetric(

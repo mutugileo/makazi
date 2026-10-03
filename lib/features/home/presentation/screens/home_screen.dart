@@ -6,7 +6,6 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../navigation/presentation/state/navigation_providers.dart';
 import '../widgets/action_needed_card.dart';
 import '../widgets/hero_balance_card.dart';
-import '../widgets/quick_actions_grid.dart';
 import '../widgets/recent_transactions_card.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -86,13 +85,6 @@ class HomeScreen extends ConsumerWidget {
               HeroBalanceCard(onPayRentPressed: navNotifier.navigateToPayments),
               const SizedBox(height: AppSpacing.md),
               ActionNeededCard(onActionPressed: () {}),
-              const SizedBox(height: AppSpacing.md),
-              QuickActionsGrid(
-                onReceiptsPressed: navNotifier.navigateToPayments,
-                onLeasePressed: () {},
-                onRepairPressed: navNotifier.navigateToRepairs,
-                onMessagePressed: navNotifier.navigateToMessages,
-              ),
               const SizedBox(height: AppSpacing.lg),
               RecentTransactionsCard(
                 onSeeAllPressed: navNotifier.navigateToPayments,

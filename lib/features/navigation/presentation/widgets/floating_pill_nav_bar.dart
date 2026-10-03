@@ -26,26 +26,27 @@ class FloatingPillNavBar extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.md,
-          AppSpacing.xs,
+          0,
           AppSpacing.md,
           AppSpacing.sm,
         ),
         child: Container(
+          height: 58,
           decoration: BoxDecoration(
             color: AppColors.cardBackground,
             borderRadius: BorderRadius.circular(36),
             border: Border.all(color: AppColors.borderLight),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
+                color: Colors.black.withValues(alpha: 0.08),
                 blurRadius: 20,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
-          padding: const EdgeInsets.all(AppSpacing.xxs + 2),
+          padding: const EdgeInsets.all(5),
           child: Row(
-            mainAxisSize: MainAxisSize.max,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               for (final tab in AppTab.values)
                 Expanded(
@@ -85,22 +86,21 @@ class _NavBarItem extends StatelessWidget {
       child: AnimatedContainer(
         duration: motion.microInteractionDuration,
         curve: motion.standardEasing,
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: isSelected ? AppColors.forestGreen : Colors.transparent,
           borderRadius: BorderRadius.circular(28),
         ),
-        child: Center(
-          child: Text(
-            tab.label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-              color: isSelected ? AppColors.pureWhite : AppColors.textSecondary,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+        child: Text(
+          tab.label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            color: isSelected ? AppColors.pureWhite : AppColors.textSecondary,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
     );
