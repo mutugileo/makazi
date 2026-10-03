@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../navigation/presentation/state/navigation_providers.dart';
+import '../../../payments/presentation/state/payments_providers.dart';
 import '../widgets/action_needed_card.dart';
 import '../widgets/hero_balance_card.dart';
 import '../widgets/recent_transactions_card.dart';
@@ -88,6 +89,15 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(height: AppSpacing.lg),
               RecentTransactionsCard(
                 onSeeAllPressed: navNotifier.navigateToPayments,
+                onTransactionTapped: (index) {
+                  final receipts = ref.read(paymentsProvider).receipts;
+                  if (index < receipts.length) {
+                    ref
+                        .read(paymentsProvider.notifier)
+                        .selectReceipt(receipts[index]);
+                    navNotifier.navigateToPayments();
+                  }
+                },
               ),
             ],
           ),

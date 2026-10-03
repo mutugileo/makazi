@@ -30,6 +30,32 @@ void main() {
       expect(find.text('KES 855,000'), findsOneWidget);
       expect(find.text('RECEIPTS'), findsOneWidget);
 
+      final firstReceipt = find.text('RCT-2610-0416');
+      expect(firstReceipt, findsOneWidget);
+      await tester.tap(firstReceipt);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Receipt'), findsWidgets);
+      expect(find.text('Jengo Property Management'), findsOneWidget);
+      expect(find.text('KRA PIN P051234567X'), findsOneWidget);
+      final downloadBtn = find.text('Download PDF');
+      expect(downloadBtn, findsOneWidget);
+      await tester.ensureVisible(downloadBtn);
+      await tester.pumpAndSettle();
+      await tester.tap(downloadBtn);
+      await tester.pump();
+      expect(find.text('Downloading receipt RCT-2610-0416...'), findsOneWidget);
+      await tester.pumpAndSettle();
+
+      final backButton = find.byIcon(Icons.chevron_left_rounded);
+      expect(backButton, findsOneWidget);
+      await tester.ensureVisible(backButton);
+      await tester.pumpAndSettle();
+      await tester.tap(backButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('RECEIPTS'), findsOneWidget);
+
       final repairsTab = find.text('Repairs').last;
       await tester.tap(repairsTab);
       await tester.pumpAndSettle();

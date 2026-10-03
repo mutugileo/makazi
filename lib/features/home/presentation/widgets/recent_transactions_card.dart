@@ -4,9 +4,14 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 
 class RecentTransactionsCard extends StatelessWidget {
-  const RecentTransactionsCard({super.key, required this.onSeeAllPressed});
+  const RecentTransactionsCard({
+    super.key,
+    required this.onSeeAllPressed,
+    this.onTransactionTapped,
+  });
 
   final VoidCallback onSeeAllPressed;
+  final ValueChanged<int>? onTransactionTapped;
 
   @override
   Widget build(BuildContext context) {
@@ -44,27 +49,30 @@ class RecentTransactionsCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: AppColors.borderLight),
           ),
-          child: const Column(
+          child: Column(
             children: [
               _TransactionTile(
                 initial: 'M',
                 title: 'Rent, October 2026 (part)',
                 subtitle: '30 Sep 2026 · M-Pesa',
                 amount: 'KES 45,000',
+                onTap: () => onTransactionTapped?.call(0),
               ),
-              Divider(height: 1, color: AppColors.borderLight),
+              const Divider(height: 1, color: AppColors.borderLight),
               _TransactionTile(
                 initial: 'M',
                 title: 'Rent, September 2026',
                 subtitle: '03 Sep 2026 · M-Pesa',
                 amount: 'KES 90,000',
+                onTap: () => onTransactionTapped?.call(1),
               ),
-              Divider(height: 1, color: AppColors.borderLight),
+              const Divider(height: 1, color: AppColors.borderLight),
               _TransactionTile(
                 initial: 'B',
                 title: 'Rent, August 2026',
                 subtitle: '04 Aug 2026 · Bank',
                 amount: 'KES 90,000',
+                onTap: () => onTransactionTapped?.call(2),
               ),
             ],
           ),
@@ -80,78 +88,84 @@ class _TransactionTile extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.amount,
+    required this.onTap,
   });
 
   final String initial;
   final String title;
   final String subtitle;
   final String amount;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.md,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: const BoxDecoration(
-              color: AppColors.mintBackground,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                initial,
-                style: AppTypography.sans(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.mintAccent,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.md,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: const BoxDecoration(
+                color: AppColors.mintBackground,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  initial,
+                  style: AppTypography.sans(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.mintAccent,
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTypography.sans(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textPrimary,
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppTypography.sans(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: AppTypography.sans(
-                    fontSize: 13,
-                    color: AppColors.textMuted,
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: AppTypography.sans(
+                      fontSize: 13,
+                      color: AppColors.textMuted,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Text(
-            amount,
-            style: AppTypography.sans(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              amount,
+              style: AppTypography.sans(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
