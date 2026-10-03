@@ -34,6 +34,12 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
   @override
   Widget build(BuildContext context) {
     final messages = ref.watch(messagesProvider);
+    final mediaQuery = MediaQuery.of(context);
+    final isKeyboardOpen = mediaQuery.viewInsets.bottom > 0;
+    final systemBottomPadding = mediaQuery.padding.bottom;
+    final inputBottomPadding = isKeyboardOpen
+        ? AppSpacing.sm
+        : systemBottomPadding + 86.0;
 
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
@@ -113,11 +119,11 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(
+              padding: EdgeInsets.fromLTRB(
                 AppSpacing.md,
                 AppSpacing.xs,
                 AppSpacing.md,
-                98,
+                inputBottomPadding,
               ),
               child: Container(
                 padding: const EdgeInsets.symmetric(

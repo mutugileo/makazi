@@ -21,6 +21,8 @@ class AppShellScreen extends ConsumerWidget {
         theme.extension<AppMotionThemeExtension>() ??
         const AppMotionThemeExtension.regular();
 
+    final isKeyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       extendBody: true,
@@ -42,12 +44,14 @@ class AppShellScreen extends ConsumerWidget {
         },
         child: _buildCurrentScreen(navState.currentTab),
       ),
-      bottomNavigationBar: FloatingPillNavBar(
-        currentTab: navState.currentTab,
-        onTabSelected: (tab) {
-          ref.read(navigationProvider.notifier).selectTab(tab);
-        },
-      ),
+      bottomNavigationBar: isKeyboardOpen
+          ? null
+          : FloatingPillNavBar(
+              currentTab: navState.currentTab,
+              onTabSelected: (tab) {
+                ref.read(navigationProvider.notifier).selectTab(tab);
+              },
+            ),
     );
   }
 
