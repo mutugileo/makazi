@@ -81,4 +81,8 @@ class PaymentsNotifier extends Notifier<PaymentsUiState> {
     }
     state = state.copyWith(selectedReceipt: () => null);
   }
+
+  void addReceipt(PaymentReceipt receipt) {
+    state = state.copyWith(receipts: [receipt, ...state.receipts]);
+  }
 }

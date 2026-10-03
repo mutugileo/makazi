@@ -4,9 +4,14 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 
 class HeroBalanceCard extends StatelessWidget {
-  const HeroBalanceCard({super.key, required this.onPayRentPressed});
+  const HeroBalanceCard({
+    super.key,
+    required this.onPayRentPressed,
+    this.isPaid = false,
+  });
 
   final VoidCallback onPayRentPressed;
+  final bool isPaid;
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +55,7 @@ class HeroBalanceCard extends StatelessWidget {
                         border: Border.all(color: const Color(0xFF1B5944)),
                       ),
                       child: Text(
-                        'Partial',
+                        isPaid ? 'Paid' : 'Partial',
                         style: AppTypography.sans(
                           fontSize: 12,
                           color: AppColors.mintPillText,
@@ -62,7 +67,7 @@ class HeroBalanceCard extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Text(
-                  'KES 45,000',
+                  isPaid ? 'KES 0' : 'KES 45,000',
                   style: AppTypography.editorialSerif(
                     fontSize: 44,
                     color: AppColors.pureWhite,
@@ -76,17 +81,19 @@ class HeroBalanceCard extends StatelessWidget {
                   child: Row(
                     children: [
                       Expanded(
+                        flex: isPaid ? 1 : 1,
                         child: Container(
                           height: 4,
                           color: AppColors.limeAccent,
                         ),
                       ),
-                      Expanded(
-                        child: Container(
-                          height: 4,
-                          color: const Color(0xFF154737),
+                      if (!isPaid)
+                        Expanded(
+                          child: Container(
+                            height: 4,
+                            color: const Color(0xFF154737),
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -96,7 +103,9 @@ class HeroBalanceCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        'KES 45,000 paid of KES 90,000',
+                        isPaid
+                            ? 'KES 90,000 paid of KES 90,000'
+                            : 'KES 45,000 paid of KES 90,000',
                         style: AppTypography.sans(
                           fontSize: 13,
                           color: const Color(0xFF98B9AA),
@@ -107,7 +116,7 @@ class HeroBalanceCard extends StatelessWidget {
                     ),
                     const SizedBox(width: AppSpacing.xs),
                     Text(
-                      'Due 5 Oct',
+                      isPaid ? 'All settled' : 'Due 5 Oct',
                       style: AppTypography.sans(
                         fontSize: 13,
                         color: const Color(0xFF98B9AA),
