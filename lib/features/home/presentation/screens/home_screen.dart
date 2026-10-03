@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/models/payment_receipt.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_motion.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -20,6 +21,7 @@ class HomeScreen extends ConsumerWidget {
     final navNotifier = ref.read(navigationProvider.notifier);
     final payRentState = ref.watch(homePayRentProvider);
     final payRentNotifier = ref.read(homePayRentProvider.notifier);
+    final paymentsState = ref.watch(paymentsProvider);
     final theme = Theme.of(context);
     final motion =
         theme.extension<AppMotionThemeExtension>() ??
@@ -57,10 +59,15 @@ class HomeScreen extends ConsumerWidget {
               : _HomeDashboardView(
                   key: const ValueKey('home_dashboard_view'),
                   isPaid: payRentState.isBalancePaid,
+                  transactions: paymentsState.receipts,
                   onPayRentPressed: payRentNotifier.openPayRent,
-                  onSeeAllPressed: navNotifier.navigateToPayments,
+                  onSeeAllPressed: () {
+                    ref.read(paymentsProvider.notifier).clearSelectedReceipt();
+                    navNotifier.navigateToPayments();
+                  },
+                  onActionNeededPressed: navNotifier.navigateToMessages,
                   onTransactionTapped: (index) {
-                    final receipts = ref.read(paymentsProvider).receipts;
+                    final receipts = paymentsState.receipts;
                     if (index < receipts.length) {
                       ref
                           .read(paymentsProvider.notifier)
@@ -79,24 +86,32 @@ class _HomeDashboardView extends StatelessWidget {
   const _HomeDashboardView({
     super.key,
     required this.isPaid,
+    required this.transactions,
     required this.onPayRentPressed,
     required this.onSeeAllPressed,
+    required this.onActionNeededPressed,
     required this.onTransactionTapped,
   });
 
   final bool isPaid;
+  final List<PaymentReceipt> transactions;
   final VoidCallback onPayRentPressed;
   final VoidCallback onSeeAllPressed;
+  final VoidCallback onActionNeededPressed;
   final ValueChanged<int> onTransactionTapped;
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final systemBottomPadding = mediaQuery.padding.bottom;
+    final scrollBottomPadding = systemBottomPadding + 86.0;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         AppSpacing.md,
         AppSpacing.sm,
         AppSpacing.md,
-        AppSpacing.xxl + AppSpacing.xl,
+        scrollBottomPadding,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -156,9 +171,10 @@ class _HomeDashboardView extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           HeroBalanceCard(isPaid: isPaid, onPayRentPressed: onPayRentPressed),
           const SizedBox(height: AppSpacing.md),
-          ActionNeededCard(onActionPressed: () {}),
+          ActionNeededCard(onActionPressed: onActionNeededPressed),
           const SizedBox(height: AppSpacing.lg),
           RecentTransactionsCard(
+            transactions: transactions,
             onSeeAllPressed: onSeeAllPressed,
             onTransactionTapped: onTransactionTapped,
           ),

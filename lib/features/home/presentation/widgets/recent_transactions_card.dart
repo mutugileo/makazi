@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/models/payment_receipt.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -6,15 +7,19 @@ import '../../../../core/theme/app_typography.dart';
 class RecentTransactionsCard extends StatelessWidget {
   const RecentTransactionsCard({
     super.key,
+    required this.transactions,
     required this.onSeeAllPressed,
     this.onTransactionTapped,
   });
 
+  final List<PaymentReceipt> transactions;
   final VoidCallback onSeeAllPressed;
   final ValueChanged<int>? onTransactionTapped;
 
   @override
   Widget build(BuildContext context) {
+    final displayItems = transactions.take(3).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -31,12 +36,16 @@ class RecentTransactionsCard extends StatelessWidget {
             ),
             GestureDetector(
               onTap: onSeeAllPressed,
-              child: Text(
-                'See all',
-                style: AppTypography.sans(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.mintAccent,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Text(
+                  'See all',
+                  style: AppTypography.sans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.mintAccent,
+                  ),
                 ),
               ),
             ),
@@ -51,29 +60,18 @@ class RecentTransactionsCard extends StatelessWidget {
           ),
           child: Column(
             children: [
-              _TransactionTile(
-                initial: 'M',
-                title: 'Rent, October 2026 (part)',
-                subtitle: '30 Sep 2026 · M-Pesa',
-                amount: 'KES 45,000',
-                onTap: () => onTransactionTapped?.call(0),
-              ),
-              const Divider(height: 1, color: AppColors.borderLight),
-              _TransactionTile(
-                initial: 'M',
-                title: 'Rent, September 2026',
-                subtitle: '03 Sep 2026 · M-Pesa',
-                amount: 'KES 90,000',
-                onTap: () => onTransactionTapped?.call(1),
-              ),
-              const Divider(height: 1, color: AppColors.borderLight),
-              _TransactionTile(
-                initial: 'B',
-                title: 'Rent, August 2026',
-                subtitle: '04 Aug 2026 · Bank',
-                amount: 'KES 90,000',
-                onTap: () => onTransactionTapped?.call(2),
-              ),
+              for (int i = 0; i < displayItems.length; i++) ...[
+                _TransactionTile(
+                  initial: displayItems[i].initial,
+                  title: displayItems[i].forDescription,
+                  subtitle:
+                      '${displayItems[i].date} · ${displayItems[i].method}',
+                  amount: displayItems[i].amount,
+                  onTap: () => onTransactionTapped?.call(i),
+                ),
+                if (i < displayItems.length - 1)
+                  const Divider(height: 1, color: AppColors.borderLight),
+              ],
             ],
           ),
         ),
@@ -136,7 +134,7 @@ class _TransactionTile extends StatelessWidget {
                     title,
                     style: AppTypography.sans(
                       fontSize: 15,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
                     ),
                     maxLines: 1,
@@ -148,6 +146,7 @@ class _TransactionTile extends StatelessWidget {
                     style: AppTypography.sans(
                       fontSize: 13,
                       color: AppColors.textMuted,
+                      fontWeight: FontWeight.w400,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

@@ -69,12 +69,16 @@ class _PaymentsListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final systemBottomPadding = mediaQuery.padding.bottom;
+    final scrollBottomPadding = systemBottomPadding + 86.0;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         AppSpacing.md,
         AppSpacing.sm,
         AppSpacing.md,
-        AppSpacing.xxl + AppSpacing.xl,
+        scrollBottomPadding,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

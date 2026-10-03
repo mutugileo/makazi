@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_motion.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_typography.dart';
 import '../../domain/models/app_tab.dart';
 
 class FloatingPillNavBar extends StatelessWidget {
@@ -94,7 +95,7 @@ class _NavBarItem extends StatelessWidget {
         child: Text(
           tab.label,
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: AppTypography.sans(
             fontSize: 14,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             color: isSelected ? AppColors.pureWhite : AppColors.textSecondary,
