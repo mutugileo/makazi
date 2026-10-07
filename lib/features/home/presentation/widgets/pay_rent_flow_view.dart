@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/billing/billing_engine.dart';
+import '../../../../core/data/data_mode.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_motion.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/receipt_detail_view.dart';
+import '../../../billing/presentation/state/tenant_account_providers.dart';
 import '../../domain/models/pay_rent_models.dart';
 import '../state/home_pay_rent_providers.dart';
 
@@ -67,240 +70,405 @@ class _PayRentFormView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(homePayRentProvider);
     final notifier = ref.read(homePayRentProvider.notifier);
+    final account = ref.watch(tenantAccountProvider);
+    final company = account.company;
+    // Until M-Pesa (Daraja) is connected, the live app shows Paybill details
+    // instead of a simulated STK push: only a real payment makes a receipt.
+    final isLive = ref.watch(liveDataProvider);
+    final amountError = state.amountError;
+    final showError =
+        amountError != null &&
+        (state.amountOption == PayRentAmountOption.fullBalance ||
+            state.otherAmountText.isNotEmpty);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.sm,
-        AppSpacing.md,
-        AppSpacing.xxl + AppSpacing.xl,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              GestureDetector(
-                onTap: notifier.closePayRent,
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: const BoxDecoration(
-                    color: AppColors.cardBackground,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.chevron_left_rounded,
-                    size: 24,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Text(
-                  'Pay rent',
-                  style: AppTypography.editorialSerif(
-                    fontSize: 34,
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.textPrimary,
-                    letterSpacing: -0.5,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Center(
-            child: Text(
-              'AMOUNT  ·  KES',
-              style: AppTypography.sans(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textMuted,
-                letterSpacing: 1.2,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Center(
-            child: Text(
-              '${state.amountValue}',
-              style: AppTypography.editorialSerif(
-                fontSize: 54,
-                fontWeight: FontWeight.w400,
-                color: AppColors.textPrimary,
-                letterSpacing: -0.5,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Center(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _AmountOptionChip(
-                    label: 'Full balance · KES 45,000',
-                    isSelected:
-                        state.amountOption == PayRentAmountOption.fullBalance,
-                    onTap: () => notifier.selectAmountOption(
-                      PayRentAmountOption.fullBalance,
+    // iOS number pads have no return key: tapping outside closes it.
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      behavior: HitTestBehavior.translucent,
+      child: SingleChildScrollView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.sm,
+          AppSpacing.md,
+          AppSpacing.xxl + AppSpacing.xl,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: notifier.closePayRent,
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: const BoxDecoration(
+                      color: AppColors.cardBackground,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.chevron_left_rounded,
+                      size: 24,
+                      color: AppColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  _AmountOptionChip(
-                    label: 'Half · KES 22,500',
-                    isSelected: state.amountOption == PayRentAmountOption.half,
-                    onTap: () =>
-                        notifier.selectAmountOption(PayRentAmountOption.half),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    'Pay rent',
+                    style: AppTypography.editorialSerif(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.textPrimary,
+                      letterSpacing: -0.5,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          _PaymentMethodCard(
-            title: 'M-Pesa',
-            subtitle: 'STK push to your phone · Paybill 522 533',
-            isSelected: state.paymentMethod == PayRentMethod.mpesa,
-            onTap: () => notifier.selectPaymentMethod(PayRentMethod.mpesa),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _PaymentMethodCard(
-            title: 'Bank transfer',
-            subtitle: 'NCBA · reflects in 1 working day',
-            isSelected: state.paymentMethod == PayRentMethod.bankTransfer,
-            onTap: () =>
-                notifier.selectPaymentMethod(PayRentMethod.bankTransfer),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          if (state.paymentMethod == PayRentMethod.mpesa) ...[
-            Text(
-              'M-Pesa number',
-              style: AppTypography.sans(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: AppColors.textMuted,
+            const SizedBox(height: AppSpacing.lg),
+            Center(
+              child: Text(
+                'AMOUNT  ·  KES',
+                style: AppTypography.sans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMuted,
+                  letterSpacing: 1.2,
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.xs),
-            Container(
-              width: double.infinity,
-              height: 56,
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-              alignment: Alignment.centerLeft,
-              decoration: BoxDecoration(
-                color: AppColors.cardBackground,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.borderLight),
-              ),
+            Center(
               child: Text(
-                state.mpesaNumber,
+                groupThousands(state.amountValue),
+                style: AppTypography.editorialSerif(
+                  fontSize: 54,
+                  fontWeight: FontWeight.w400,
+                  color: AppColors.textPrimary,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (state.fullBalance > 0) ...[
+                      _AmountOptionChip(
+                        label: 'Full balance · ${formatKes(state.fullBalance)}',
+                        isSelected:
+                            state.amountOption ==
+                            PayRentAmountOption.fullBalance,
+                        onTap: () => notifier.selectAmountOption(
+                          PayRentAmountOption.fullBalance,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                    ],
+                    _AmountOptionChip(
+                      label: 'Other amount',
+                      isSelected:
+                          state.amountOption == PayRentAmountOption.other,
+                      onTap: () => notifier.selectAmountOption(
+                        PayRentAmountOption.other,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (state.amountOption == PayRentAmountOption.other) ...[
+              const SizedBox(height: AppSpacing.md),
+              TextFormField(
+                key: const ValueKey('pay_rent_other_amount'),
+                initialValue: state.otherAmountText,
+                onChanged: notifier.updateOtherAmount,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(7),
+                ],
                 style: AppTypography.sans(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
                   color: AppColors.textPrimary,
-                  letterSpacing: 0.5,
+                  tabularFigures: true,
+                ),
+                decoration: InputDecoration(
+                  prefixText: 'KES  ',
+                  hintText: 'Amount',
+                  filled: true,
+                  fillColor: AppColors.cardBackground,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.md,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: AppColors.borderLight),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: AppColors.borderLight),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: AppColors.mintAccent,
+                      width: 1.5,
+                    ),
+                  ),
                 ),
               ),
+            ],
+            if (showError) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Center(
+                child: Text(
+                  amountError,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.sans(
+                    fontSize: 13,
+                    color: AppColors.statusUnpaidText,
+                  ),
+                ),
+              ),
+            ] else if (state.creditAfterPayment > 0) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Center(
+                child: Text(
+                  '${formatKes(state.creditAfterPayment)} will carry to your next bill as credit',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.sans(
+                    fontSize: 13,
+                    color: AppColors.statusCreditText,
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.xl),
+            _PaymentMethodCard(
+              title: 'M-Pesa',
+              subtitle: isLive
+                  ? 'Paybill ${company.mpesaPaybill} · '
+                        'Account ${account.accountNumber}'
+                  : 'STK push to your phone · Paybill ${company.mpesaPaybill} · '
+                        'Account ${account.accountNumber}',
+              isSelected: state.paymentMethod == PayRentMethod.mpesa,
+              onTap: () => notifier.selectPaymentMethod(PayRentMethod.mpesa),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _PaymentMethodCard(
+              title: 'Bank transfer',
+              subtitle: '${company.bankName} · reflects in 1 working day',
+              isSelected: state.paymentMethod == PayRentMethod.bankTransfer,
+              onTap: () =>
+                  notifier.selectPaymentMethod(PayRentMethod.bankTransfer),
             ),
             const SizedBox(height: AppSpacing.lg),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: notifier.submitPayment,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.mintAccent,
-                  foregroundColor: AppColors.pureWhite,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+            if (state.paymentMethod == PayRentMethod.mpesa && isLive) ...[
+              Container(
+                key: const ValueKey('mpesa_paybill_details'),
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackground,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.borderLight),
+                ),
+                child: Column(
+                  children: [
+                    _BankRow(label: 'Paybill', value: company.mpesaPaybill),
+                    const SizedBox(height: AppSpacing.sm),
+                    _BankRow(label: 'Account', value: account.accountNumber),
+                    const SizedBox(height: AppSpacing.sm),
+                    _BankRow(label: 'Amount', value: state.amountFormatted),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Pay from M-Pesa, then your receipt appears here once '
+                '${company.name} records the payment.',
+                style: AppTypography.sans(
+                  fontSize: 13,
+                  color: AppColors.textMuted,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              _CopyDetailsButton(
+                label: 'Copy Paybill details',
+                text:
+                    'Paybill: ${company.mpesaPaybill}\n'
+                    'Account: ${account.accountNumber}\n'
+                    'Amount: ${state.amountFormatted}',
+                confirmation: 'Paybill details copied to clipboard',
+              ),
+            ] else if (state.paymentMethod == PayRentMethod.mpesa) ...[
+              Text(
+                'M-Pesa number',
+                style: AppTypography.sans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Container(
+                width: double.infinity,
+                height: 56,
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                alignment: Alignment.centerLeft,
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackground,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.borderLight),
                 ),
                 child: Text(
-                  'Pay ${state.amountFormatted}',
+                  account.tenant.phone,
                   style: AppTypography.sans(
                     fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.pureWhite,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textPrimary,
+                    letterSpacing: 0.5,
                   ),
                 ),
               ),
-            ),
-          ] else ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: AppColors.cardBackground,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.borderLight),
-              ),
-              child: Column(
-                children: const [
-                  _BankRow(label: 'Bank', value: 'NCBA Bank, Westlands'),
-                  SizedBox(height: AppSpacing.sm),
-                  _BankRow(label: 'Account', value: '1004  5582  31'),
-                  SizedBox(height: AppSpacing.sm),
-                  _BankRow(label: 'Reference', value: 'RC-5A'),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: () {
-                  Clipboard.setData(
-                    const ClipboardData(
-                      text:
-                          'Bank: NCBA Bank, Westlands\nAccount: 1004558231\nReference: RC-5A',
+              const SizedBox(height: AppSpacing.lg),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: state.canSubmit
+                      ? () {
+                          FocusScope.of(context).unfocus();
+                          notifier.submitPayment();
+                        }
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.mintAccent,
+                    foregroundColor: AppColors.pureWhite,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                  );
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Bank details copied to clipboard',
-                        style: AppTypography.sans(
-                          fontSize: 14,
-                          color: AppColors.pureWhite,
-                        ),
-                      ),
-                      backgroundColor: AppColors.forestGreen,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.mintAccent,
-                  foregroundColor: AppColors.pureWhite,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
                   ),
-                ),
-                child: Text(
-                  'Copy bank details',
-                  style: AppTypography.sans(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.pureWhite,
+                  child: Text(
+                    'Pay ${state.amountFormatted}',
+                    style: AppTypography.sans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.pureWhite,
+                    ),
                   ),
                 ),
               ),
-            ),
+            ] else ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackground,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.borderLight),
+                ),
+                child: Column(
+                  children: [
+                    _BankRow(label: 'Bank', value: company.bankName),
+                    const SizedBox(height: AppSpacing.sm),
+                    _BankRow(
+                      label: 'Account',
+                      value: _spacedAccount(company.bankAccount),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    _BankRow(label: 'Reference', value: account.accountNumber),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              _CopyDetailsButton(
+                label: 'Copy bank details',
+                text:
+                    'Bank: ${company.bankName}\n'
+                    'Account: ${company.bankAccount}\n'
+                    'Reference: ${account.accountNumber}',
+                confirmation: 'Bank details copied to clipboard',
+              ),
+            ],
           ],
-        ],
+        ),
+      ),
+    );
+  }
+
+  static String _spacedAccount(String account) => account
+      .replaceAllMapped(RegExp(r'.{1,4}'), (m) => '${m.group(0)}  ')
+      .trim();
+}
+
+class _CopyDetailsButton extends StatelessWidget {
+  const _CopyDetailsButton({
+    required this.label,
+    required this.text,
+    required this.confirmation,
+  });
+
+  final String label;
+  final String text;
+  final String confirmation;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: ElevatedButton(
+        onPressed: () async {
+          await Clipboard.setData(ClipboardData(text: text));
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                confirmation,
+                style: AppTypography.sans(
+                  fontSize: 14,
+                  color: AppColors.pureWhite,
+                ),
+              ),
+              backgroundColor: AppColors.forestGreen,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.mintAccent,
+          foregroundColor: AppColors.pureWhite,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: Text(
+          label,
+          style: AppTypography.sans(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: AppColors.pureWhite,
+          ),
+        ),
       ),
     );
   }
@@ -406,7 +574,7 @@ class _PaymentMethodCard extends StatelessWidget {
                 border: Border.all(
                   color: isSelected
                       ? AppColors.mintAccent
-                      : const Color(0xFFD1D5DB),
+                      : AppColors.borderStrong,
                   width: isSelected ? 2.0 : 1.5,
                 ),
               ),

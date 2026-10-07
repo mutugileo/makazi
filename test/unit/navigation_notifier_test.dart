@@ -50,5 +50,68 @@ void main() {
       notifier.navigateToMessages();
       expect(container.read(navigationProvider).currentTab, AppTab.messages);
     });
+
+    test('popTab pops previous tab from history stack', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(navigationProvider.notifier);
+      notifier.selectTab(AppTab.payments);
+      notifier.selectTab(AppTab.repairs);
+
+      expect(container.read(navigationProvider).currentTab, AppTab.repairs);
+      expect(container.read(navigationProvider).tabHistory, [
+        AppTab.home,
+        AppTab.payments,
+        AppTab.repairs,
+      ]);
+
+      final poppedFirst = notifier.popTab();
+      expect(poppedFirst, isTrue);
+      expect(container.read(navigationProvider).currentTab, AppTab.payments);
+      expect(container.read(navigationProvider).tabHistory, [
+        AppTab.home,
+        AppTab.payments,
+      ]);
+
+      final poppedSecond = notifier.popTab();
+      expect(poppedSecond, isTrue);
+      expect(container.read(navigationProvider).currentTab, AppTab.home);
+      expect(container.read(navigationProvider).tabHistory, [AppTab.home]);
+
+      final poppedThird = notifier.popTab();
+      expect(poppedThird, isFalse);
+      expect(container.read(navigationProvider).currentTab, AppTab.home);
+    });
+
+    test('selectTab resets history when home tab selected', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(navigationProvider.notifier);
+      notifier.selectTab(AppTab.payments);
+      notifier.selectTab(AppTab.repairs);
+      notifier.selectTab(AppTab.home);
+
+      expect(container.read(navigationProvider).currentTab, AppTab.home);
+      expect(container.read(navigationProvider).tabHistory, [AppTab.home]);
+      expect(container.read(navigationProvider).canPopTab, isFalse);
+    });
+
+    test('selectTab deduplicates tab stack preserving home root', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(navigationProvider.notifier);
+      notifier.selectTab(AppTab.payments);
+      notifier.selectTab(AppTab.repairs);
+      notifier.selectTab(AppTab.payments);
+
+      expect(container.read(navigationProvider).tabHistory, [
+        AppTab.home,
+        AppTab.repairs,
+        AppTab.payments,
+      ]);
+    });
   });
 }

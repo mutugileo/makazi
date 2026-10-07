@@ -151,7 +151,7 @@ class _ReportRepairFormViewState extends ConsumerState<ReportRepairFormView> {
             onTap: notifier.togglePhotoAttachment,
             child: CustomPaint(
               painter: const _DashedBorderPainter(
-                color: Color(0xFFCDD5C9),
+                color: AppColors.borderStrong,
                 radius: 20,
               ),
               child: Container(
@@ -237,6 +237,18 @@ class _ReportRepairFormViewState extends ConsumerState<ReportRepairFormView> {
                     ),
             ),
           ),
+          if (state.submitError != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              state.submitError!,
+              key: const ValueKey('repair_submit_error'),
+              textAlign: TextAlign.center,
+              style: AppTypography.sans(
+                fontSize: 13,
+                color: AppColors.statusUnpaidText,
+              ),
+            ),
+          ],
         ],
       ),
     );

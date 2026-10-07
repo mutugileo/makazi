@@ -2,70 +2,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/payment_receipt.dart';
 import 'payments_ui_state.dart';
 
+/// Navigation state for the Payments tab. Bills and receipts themselves come
+/// from tenantAccountProvider.
 class PaymentsNotifier extends Notifier<PaymentsUiState> {
   @override
   PaymentsUiState build() {
-    return const PaymentsUiState(
-      receipts: [
-        PaymentReceipt(
-          id: 'rcpt-1',
-          receiptNumber: 'RCT-2610-0416',
-          companyName: 'Jengo Property Management',
-          kraPin: 'P051234567X',
-          amount: 'KES 45,000',
-          tenantName: 'David Mwangi',
-          unit: '5A · Riverside Court',
-          date: '30 Sep 2026',
-          method: 'M-Pesa',
-          reference: 'SJ93HD72PL',
-          forDescription: 'Rent, October 2026 (part)',
-          initial: 'M',
-        ),
-        PaymentReceipt(
-          id: 'rcpt-2',
-          receiptNumber: 'RCT-2609-0371',
-          companyName: 'Jengo Property Management',
-          kraPin: 'P051234567X',
-          amount: 'KES 90,000',
-          tenantName: 'David Mwangi',
-          unit: '5A · Riverside Court',
-          date: '03 Sep 2026',
-          method: 'M-Pesa',
-          reference: 'QK89HD34MP',
-          forDescription: 'Rent, September 2026',
-          initial: 'M',
-        ),
-        PaymentReceipt(
-          id: 'rcpt-3',
-          receiptNumber: 'RCT-2608-0322',
-          companyName: 'Jengo Property Management',
-          kraPin: 'P051234567X',
-          amount: 'KES 90,000',
-          tenantName: 'David Mwangi',
-          unit: '5A · Riverside Court',
-          date: '04 Aug 2026',
-          method: 'Bank',
-          reference: 'BNK-26804-991',
-          forDescription: 'Rent, August 2026',
-          initial: 'B',
-        ),
-        PaymentReceipt(
-          id: 'rcpt-4',
-          receiptNumber: 'RCT-2607-0287',
-          companyName: 'Jengo Property Management',
-          kraPin: 'P051234567X',
-          amount: 'KES 90,000',
-          tenantName: 'David Mwangi',
-          unit: '5A · Riverside Court',
-          date: '02 Jul 2026',
-          method: 'M-Pesa',
-          reference: 'MP8732KD91',
-          forDescription: 'Rent, July 2026',
-          initial: 'M',
-        ),
-      ],
-      selectedReceipt: null,
+    return const PaymentsUiState();
+  }
+
+  void showView(PaymentsView view) {
+    if (state.view == view) return;
+    state = state.copyWith(view: view);
+  }
+
+  void selectBill(String month) {
+    state = state.copyWith(
+      view: PaymentsView.bills,
+      selectedBillMonth: () => month,
+      selectedReceipt: () => null,
     );
+  }
+
+  void clearSelectedBill() {
+    if (state.selectedBillMonth == null) return;
+    state = state.copyWith(selectedBillMonth: () => null);
   }
 
   void selectReceipt(PaymentReceipt receipt) {
@@ -82,7 +42,12 @@ class PaymentsNotifier extends Notifier<PaymentsUiState> {
     state = state.copyWith(selectedReceipt: () => null);
   }
 
-  void addReceipt(PaymentReceipt receipt) {
-    state = state.copyWith(receipts: [receipt, ...state.receipts]);
+  void showStatement() => state = state.copyWith(showingStatement: true);
+
+  void closeStatement() => state = state.copyWith(showingStatement: false);
+
+  /// Back to the top of the tab (used when arriving from Home).
+  void resetToList(PaymentsView view) {
+    state = PaymentsUiState(view: view);
   }
 }

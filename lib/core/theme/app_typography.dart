@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+// Same pairing as the admin (PropAdmin/src/styles/global.css): Newsreader for
+// editorial headings and amounts, Nunito Sans for everything else.
 abstract final class AppTypography {
   static TextTheme createTextTheme(Color defaultTextColor) {
     final baseTextTheme = Typography.material2021().black;
-    return GoogleFonts.lexendTextTheme(
+    return GoogleFonts.nunitoSansTextTheme(
       baseTextTheme,
     ).apply(bodyColor: defaultTextColor, displayColor: defaultTextColor);
   }
@@ -31,13 +33,17 @@ abstract final class AppTypography {
     Color? color,
     double? letterSpacing,
     double? height,
+    bool tabularFigures = false,
   }) {
-    return GoogleFonts.lexend(
+    return GoogleFonts.nunitoSans(
       fontSize: fontSize,
       fontWeight: fontWeight ?? FontWeight.normal,
       color: color,
       letterSpacing: letterSpacing,
       height: height,
+      fontFeatures: tabularFigures
+          ? const [FontFeature.tabularFigures()]
+          : null,
     );
   }
 }

@@ -30,7 +30,7 @@ void main() {
       expect(find.text('Electrical'), findsOneWidget);
       expect(find.text('Carpentry'), findsOneWidget);
       expect(find.text('Appliance'), findsOneWidget);
-      expect(find.text('Security'), findsOneWidget);
+      expect(find.text('Security & access'), findsOneWidget);
       expect(find.text('DESCRIPTION'), findsOneWidget);
       expect(find.text('Add photos'), findsOneWidget);
       expect(find.text('Submit request'), findsOneWidget);

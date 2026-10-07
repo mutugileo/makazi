@@ -1,38 +1,44 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prop_mgt_app/features/billing/presentation/state/tenant_account_providers.dart';
 import 'package:prop_mgt_app/features/payments/presentation/state/payments_providers.dart';
+import 'package:prop_mgt_app/features/payments/presentation/state/payments_ui_state.dart';
 
 void main() {
   group('PaymentsNotifier', () {
-    test('initial state contains receipts and null selectedReceipt', () {
+    test('starts on the bills list with nothing selected', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
       final state = container.read(paymentsProvider);
 
-      expect(state.receipts.length, 4);
+      expect(state.view, PaymentsView.bills);
+      expect(state.selectedBillMonth, isNull);
       expect(state.selectedReceipt, isNull);
     });
 
-    test('selectReceipt sets selectedReceipt in state', () {
+    test('selectBill opens a bill and clearSelectedBill closes it', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
+      final notifier = container.read(paymentsProvider.notifier);
 
-      final firstReceipt = container.read(paymentsProvider).receipts.first;
-      container.read(paymentsProvider.notifier).selectReceipt(firstReceipt);
+      notifier.selectBill('2026-09');
+      expect(container.read(paymentsProvider).selectedBillMonth, '2026-09');
 
-      final updatedState = container.read(paymentsProvider);
-      expect(updatedState.selectedReceipt, firstReceipt);
-      expect(updatedState.selectedReceipt?.receiptNumber, 'RCT-2610-0416');
+      notifier.clearSelectedBill();
+      expect(container.read(paymentsProvider).selectedBillMonth, isNull);
     });
 
-    test('clearSelectedReceipt resets selectedReceipt to null', () {
+    test('selectReceipt sets and clearSelectedReceipt resets', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      final firstReceipt = container.read(paymentsProvider).receipts.first;
+      final firstReceipt = container.read(tenantAccountProvider).receipts.first;
       container.read(paymentsProvider.notifier).selectReceipt(firstReceipt);
-      expect(container.read(paymentsProvider).selectedReceipt, isNotNull);
+      expect(
+        container.read(paymentsProvider).selectedReceipt?.receiptNumber,
+        'RCT-2610-0373',
+      );
 
       container.read(paymentsProvider.notifier).clearSelectedReceipt();
       expect(container.read(paymentsProvider).selectedReceipt, isNull);
@@ -42,17 +48,25 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      final firstReceipt = container.read(paymentsProvider).receipts.first;
+      final firstReceipt = container.read(tenantAccountProvider).receipts.first;
       container.read(paymentsProvider.notifier).selectReceipt(firstReceipt);
-      final stateAfterFirstSelect = container.read(paymentsProvider);
-
+      final before = container.read(paymentsProvider);
       container.read(paymentsProvider.notifier).selectReceipt(firstReceipt);
-      final stateAfterDuplicateSelect = container.read(paymentsProvider);
 
-      expect(
-        identical(stateAfterFirstSelect, stateAfterDuplicateSelect),
-        isTrue,
-      );
+      expect(identical(before, container.read(paymentsProvider)), isTrue);
+    });
+
+    test('resetToList clears selections and switches view', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final notifier = container.read(paymentsProvider.notifier)
+        ..selectBill('2026-10');
+
+      notifier.resetToList(PaymentsView.receipts);
+
+      final state = container.read(paymentsProvider);
+      expect(state.view, PaymentsView.receipts);
+      expect(state.selectedBillMonth, isNull);
     });
   });
 }

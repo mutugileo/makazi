@@ -3,6 +3,7 @@ import '../../../../core/models/payment_receipt.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/empty_state.dart';
 
 class RecentTransactionsCard extends StatelessWidget {
   const RecentTransactionsCard({
@@ -60,13 +61,19 @@ class RecentTransactionsCard extends StatelessWidget {
           ),
           child: Column(
             children: [
+              if (displayItems.isEmpty)
+                const EmptyState(
+                  icon: Icons.receipt_long_outlined,
+                  title: 'No payments yet',
+                  message: 'Your receipts appear here after you pay.',
+                ),
               for (int i = 0; i < displayItems.length; i++) ...[
                 _TransactionTile(
                   initial: displayItems[i].initial,
                   title: displayItems[i].forDescription,
                   subtitle:
-                      '${displayItems[i].date} · ${displayItems[i].method}',
-                  amount: displayItems[i].amount,
+                      '${displayItems[i].dateLabel} · ${displayItems[i].method}',
+                  amount: displayItems[i].amountLabel,
                   onTap: () => onTransactionTapped?.call(i),
                 ),
                 if (i < displayItems.length - 1)

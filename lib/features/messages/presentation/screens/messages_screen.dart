@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_motion.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../billing/presentation/state/tenant_account_providers.dart';
+import '../../../../core/widgets/empty_state.dart';
 import '../../domain/models/chat_message.dart';
+import '../state/messages_notifier.dart';
 import '../state/messages_providers.dart';
+import '../widgets/typing_indicator.dart';
 
 class MessagesScreen extends ConsumerStatefulWidget {
   const MessagesScreen({super.key});
@@ -34,15 +39,30 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
   @override
   Widget build(BuildContext context) {
     final messages = ref.watch(messagesProvider);
+    final isManagerTyping = ref.watch(managerTypingProvider);
+    final account = ref.watch(tenantAccountProvider);
+    final managerName = account.manager?.name ?? account.company.name;
+    final managerInitials = managerName
+        .split(' ')
+        .where((part) => part.isNotEmpty)
+        .take(2)
+        .map((part) => part[0])
+        .join();
+    final companyShortName = account.company.name.split(' ').first;
+    final theme = Theme.of(context);
+    final motion =
+        theme.extension<AppMotionThemeExtension>() ??
+        const AppMotionThemeExtension.regular();
     final mediaQuery = MediaQuery.of(context);
     final isKeyboardOpen = mediaQuery.viewInsets.bottom > 0;
     final systemBottomPadding = mediaQuery.padding.bottom;
     final inputBottomPadding = isKeyboardOpen
-        ? AppSpacing.sm
-        : systemBottomPadding + 86.0;
+        ? AppSpacing.xs
+        : systemBottomPadding + 74.0;
 
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -63,7 +83,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                     ),
                     child: Center(
                       child: Text(
-                        'NK',
+                        managerInitials,
                         style: AppTypography.sans(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -78,7 +98,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Njoki Kariuki',
+                          managerName,
                           style: AppTypography.editorialSerif(
                             fontSize: 24,
                             fontWeight: FontWeight.w400,
@@ -88,7 +108,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          'Property manager · Jengo',
+                          'Property manager · $companyShortName',
                           style: AppTypography.sans(
                             fontSize: 13,
                             color: AppColors.textMuted,
@@ -104,21 +124,41 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
             ),
             const Divider(height: 1, color: AppColors.borderLight),
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  AppSpacing.md,
-                  AppSpacing.md,
-                  AppSpacing.md,
-                ),
-                itemCount: messages.length,
-                itemBuilder: (context, index) {
-                  final message = messages[index];
-                  return _ChatMessageItem(message: message);
-                },
-              ),
+              child: messages.isEmpty && !isManagerTyping
+                  ? Center(
+                      child: EmptyState(
+                        icon: Icons.chat_bubble_outline_rounded,
+                        title: 'No messages yet',
+                        message: 'Ask $managerName anything about your home.',
+                      ),
+                    )
+                  : ListView.builder(
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        AppSpacing.sm,
+                        AppSpacing.md,
+                        AppSpacing.sm,
+                      ),
+                      itemCount: messages.length + (isManagerTyping ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == messages.length) {
+                          return TypingIndicator(senderName: managerName);
+                        }
+                        final message = messages[index];
+                        return _ChatMessageItem(
+                          message: message,
+                          onRetry: () => ref
+                              .read(messagesProvider.notifier)
+                              .retry(message.id),
+                        );
+                      },
+                    ),
             ),
-            Padding(
+            AnimatedPadding(
+              duration: motion.shortFeedbackDuration,
+              curve: motion.standardEasing,
               padding: EdgeInsets.fromLTRB(
                 AppSpacing.md,
                 AppSpacing.xs,
@@ -126,20 +166,26 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                 inputBottomPadding,
               ),
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: 6,
-                ),
+                padding: const EdgeInsets.fromLTRB(AppSpacing.md, 4, 6, 4),
                 decoration: BoxDecoration(
                   color: AppColors.cardBackground,
-                  borderRadius: BorderRadius.circular(32),
+                  borderRadius: BorderRadius.circular(28),
                   border: Border.all(color: AppColors.borderLight),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Row(
                   children: [
                     Expanded(
                       child: TextField(
                         controller: _textController,
+                        textCapitalization: TextCapitalization.sentences,
+                        textInputAction: TextInputAction.send,
                         onSubmitted: (_) => _sendMessage(),
                         style: AppTypography.sans(
                           fontSize: 15,
@@ -153,23 +199,31 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                           ),
                           border: InputBorder.none,
                           isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10,
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.xs),
-                    GestureDetector(
-                      onTap: _sendMessage,
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: const BoxDecoration(
-                          color: AppColors.mintAccent,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.arrow_upward_rounded,
-                          color: AppColors.pureWhite,
-                          size: 20,
+                    Semantics(
+                      button: true,
+                      label: 'Send message',
+                      child: GestureDetector(
+                        onTap: _sendMessage,
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: const BoxDecoration(
+                            color: AppColors.mintAccent,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.arrow_upward_rounded,
+                            color: AppColors.pureWhite,
+                            size: 20,
+                          ),
                         ),
                       ),
                     ),
@@ -185,9 +239,10 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
 }
 
 class _ChatMessageItem extends StatelessWidget {
-  const _ChatMessageItem({required this.message});
+  const _ChatMessageItem({required this.message, required this.onRetry});
 
   final ChatMessage message;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -216,13 +271,33 @@ class _ChatMessageItem extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              message.timestamp,
-              style: AppTypography.sans(
-                fontSize: 11,
-                color: AppColors.textMuted,
+            switch (message.delivery) {
+              MessageDelivery.sent => Text(
+                message.timestamp,
+                style: AppTypography.sans(
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                ),
               ),
-            ),
+              MessageDelivery.sending => Text(
+                'Sending…',
+                style: AppTypography.sans(
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              MessageDelivery.failed => GestureDetector(
+                onTap: onRetry,
+                child: Text(
+                  'Not sent · Tap to retry',
+                  style: AppTypography.sans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.statusUnpaidText,
+                  ),
+                ),
+              ),
+            },
           ],
         ),
       );

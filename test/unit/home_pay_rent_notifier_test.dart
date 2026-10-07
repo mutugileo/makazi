@@ -1,49 +1,74 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prop_mgt_app/features/billing/presentation/state/tenant_account_providers.dart';
 import 'package:prop_mgt_app/features/home/domain/models/pay_rent_models.dart';
 import 'package:prop_mgt_app/features/home/presentation/state/home_pay_rent_providers.dart';
 
 void main() {
   group('HomePayRentNotifier', () {
-    test('initial state has default options and isPayRentOpen false', () {
+    test('initial state is closed with M-Pesa selected', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
       final state = container.read(homePayRentProvider);
 
       expect(state.isPayRentOpen, isFalse);
-      expect(state.amountOption, PayRentAmountOption.fullBalance);
-      expect(state.amountValue, 45000);
       expect(state.paymentMethod, PayRentMethod.mpesa);
       expect(state.step, PayRentStep.form);
-      expect(state.isBalancePaid, isFalse);
     });
 
-    test('openPayRent sets isPayRentOpen true and resets step to form', () {
+    test(
+      'openPayRent snapshots the outstanding balance as the full amount',
+      () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        container.read(homePayRentProvider.notifier).openPayRent();
+
+        final state = container.read(homePayRentProvider);
+        expect(state.isPayRentOpen, isTrue);
+        expect(state.step, PayRentStep.form);
+        expect(state.fullBalance, 18950);
+        expect(state.amountOption, PayRentAmountOption.fullBalance);
+        expect(state.amountValue, 18950);
+        expect(state.amountFormatted, 'KES 18,950');
+      },
+    );
+
+    test('other amount is validated', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
+      final notifier = container.read(homePayRentProvider.notifier)
+        ..openPayRent()
+        ..selectAmountOption(PayRentAmountOption.other);
 
-      container.read(homePayRentProvider.notifier).openPayRent();
-
-      final state = container.read(homePayRentProvider);
-      expect(state.isPayRentOpen, isTrue);
-      expect(state.step, PayRentStep.form);
-    });
-
-    test('selectAmountOption toggles amount and formatted value', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      container
-          .read(homePayRentProvider.notifier)
-          .selectAmountOption(PayRentAmountOption.half);
-
+      expect(container.read(homePayRentProvider).canSubmit, isFalse);
       expect(
-        container.read(homePayRentProvider).amountOption,
-        PayRentAmountOption.half,
+        container.read(homePayRentProvider).amountError,
+        'Enter an amount to pay',
       );
-      expect(container.read(homePayRentProvider).amountValue, 22500);
-      expect(container.read(homePayRentProvider).amountFormatted, 'KES 22,500');
+
+      notifier.updateOtherAmount('300000');
+      expect(container.read(homePayRentProvider).canSubmit, isFalse);
+      expect(
+        container.read(homePayRentProvider).amountError,
+        contains('250,000'),
+      );
+
+      notifier.updateOtherAmount('20000');
+      expect(container.read(homePayRentProvider).canSubmit, isTrue);
+      expect(container.read(homePayRentProvider).amountValue, 20000);
+    });
+
+    test('paying more than the balance reports the credit', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      container.read(homePayRentProvider.notifier)
+        ..openPayRent()
+        ..selectAmountOption(PayRentAmountOption.other)
+        ..updateOtherAmount('20000');
+
+      expect(container.read(homePayRentProvider).creditAfterPayment, 1050);
     });
 
     test('selectPaymentMethod switches between mpesa and bank transfer', () {
@@ -60,34 +85,72 @@ void main() {
       );
     });
 
-    test('submitPayment moves through confirming to received state', () async {
+    test(
+      'submitPayment records the payment before showing it received',
+      () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final notifier = container.read(homePayRentProvider.notifier)
+          ..openPayRent();
+
+        final future = notifier.submitPayment();
+        expect(
+          container.read(homePayRentProvider).step,
+          PayRentStep.confirming,
+        );
+        expect(container.read(tenantAccountProvider).balance, 18950);
+
+        await future;
+
+        final state = container.read(homePayRentProvider);
+        expect(state.step, PayRentStep.received);
+        expect(state.completedReceipt?.receiptNumber, 'RCT-2610-0380');
+        expect(state.completedReceipt?.amount, 18950);
+        expect(state.completedReceipt?.forDescription, 'Bill, October 2026');
+        expect(container.read(tenantAccountProvider).balance, 0);
+      },
+    );
+
+    test('a part payment leaves the rest outstanding', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
+      final notifier = container.read(homePayRentProvider.notifier)
+        ..openPayRent()
+        ..selectAmountOption(PayRentAmountOption.other)
+        ..updateOtherAmount('10000');
 
-      final future = container
-          .read(homePayRentProvider.notifier)
-          .submitPayment();
-      expect(container.read(homePayRentProvider).step, PayRentStep.confirming);
+      await notifier.submitPayment();
 
+      expect(
+        container.read(homePayRentProvider).completedReceipt?.forDescription,
+        'Bill, October 2026 (part)',
+      );
+      expect(container.read(tenantAccountProvider).balance, 8950);
+    });
+
+    test('closing is ignored while a payment is confirming', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final notifier = container.read(homePayRentProvider.notifier)
+        ..openPayRent();
+
+      final future = notifier.submitPayment();
+      notifier.closePayRent();
+      expect(container.read(homePayRentProvider).isPayRentOpen, isTrue);
       await future;
-
-      final state = container.read(homePayRentProvider);
-      expect(state.step, PayRentStep.received);
-      expect(state.completedReceipt, isNotNull);
-      expect(state.completedReceipt?.receiptNumber, 'RCT-2610-0423');
-      expect(state.isBalancePaid, isTrue);
     });
 
     test('viewCompletedReceipt and closeReceiptDetail toggle state', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
+      final notifier = container.read(homePayRentProvider.notifier)
+        ..openPayRent();
 
-      await container.read(homePayRentProvider.notifier).submitPayment();
-      container.read(homePayRentProvider.notifier).viewCompletedReceipt();
-
+      await notifier.submitPayment();
+      notifier.viewCompletedReceipt();
       expect(container.read(homePayRentProvider).showingReceiptDetail, isTrue);
 
-      container.read(homePayRentProvider.notifier).closeReceiptDetail();
+      notifier.closeReceiptDetail();
       expect(container.read(homePayRentProvider).showingReceiptDetail, isFalse);
     });
 
@@ -95,8 +158,9 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      container.read(homePayRentProvider.notifier).openPayRent();
-      container.read(homePayRentProvider.notifier).finishPayRent();
+      container.read(homePayRentProvider.notifier)
+        ..openPayRent()
+        ..finishPayRent();
 
       final state = container.read(homePayRentProvider);
       expect(state.isPayRentOpen, isFalse);

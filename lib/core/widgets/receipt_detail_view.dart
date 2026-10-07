@@ -80,7 +80,7 @@ class ReceiptDetailView extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      'J',
+                      receipt.companyName.substring(0, 1),
                       style: AppTypography.editorialSerif(
                         fontSize: 24,
                         color: AppColors.pureWhite,
@@ -130,7 +130,7 @@ class ReceiptDetailView extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  receipt.amount,
+                  receipt.amountLabel,
                   style: AppTypography.editorialSerif(
                     fontSize: 44,
                     fontWeight: FontWeight.w400,
@@ -148,7 +148,7 @@ class ReceiptDetailView extends StatelessWidget {
                 _DetailRow(label: 'Receipt', value: receipt.receiptNumber),
                 _DetailRow(label: 'Tenant', value: receipt.tenantName),
                 _DetailRow(label: 'Unit', value: receipt.unit),
-                _DetailRow(label: 'Date', value: receipt.date),
+                _DetailRow(label: 'Date', value: receipt.dateTimeLabel),
                 _DetailRow(label: 'Method', value: receipt.method),
                 _DetailRow(label: 'Reference', value: receipt.reference),
                 _DetailRow(label: 'For', value: receipt.forDescription),
@@ -164,7 +164,8 @@ class ReceiptDetailView extends StatelessWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      'Downloading receipt ${receipt.receiptNumber}...',
+                      'PDF receipts not available yet. '
+                      'They arrive with the database.',
                       style: AppTypography.sans(
                         fontSize: 14,
                         color: AppColors.pureWhite,

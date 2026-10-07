@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../../../core/billing/billing_engine.dart';
 import '../../../../core/models/payment_receipt.dart';
 import '../../domain/models/pay_rent_models.dart';
 
@@ -6,73 +7,80 @@ import '../../domain/models/pay_rent_models.dart';
 class HomePayRentUiState {
   const HomePayRentUiState({
     required this.isPayRentOpen,
+    required this.fullBalance,
     required this.amountOption,
+    required this.otherAmountText,
     required this.paymentMethod,
-    required this.mpesaNumber,
     required this.step,
     required this.completedReceipt,
     required this.showingReceiptDetail,
-    required this.isBalancePaid,
   });
 
   const HomePayRentUiState.initial()
     : isPayRentOpen = false,
+      fullBalance = 0,
       amountOption = PayRentAmountOption.fullBalance,
+      otherAmountText = '',
       paymentMethod = PayRentMethod.mpesa,
-      mpesaNumber = '0733  605  118',
       step = PayRentStep.form,
       completedReceipt = null,
-      showingReceiptDetail = false,
-      isBalancePaid = false;
+      showingReceiptDetail = false;
 
   final bool isPayRentOpen;
+
+  /// Outstanding balance when the flow was opened.
+  final int fullBalance;
   final PayRentAmountOption amountOption;
+  final String otherAmountText;
   final PayRentMethod paymentMethod;
-  final String mpesaNumber;
   final PayRentStep step;
   final PaymentReceipt? completedReceipt;
   final bool showingReceiptDetail;
-  final bool isBalancePaid;
 
-  int get amountValue {
-    switch (amountOption) {
-      case PayRentAmountOption.fullBalance:
-        return 45000;
-      case PayRentAmountOption.half:
-        return 22500;
+  int get amountValue => switch (amountOption) {
+    PayRentAmountOption.fullBalance => fullBalance,
+    PayRentAmountOption.other => int.tryParse(otherAmountText) ?? 0,
+  };
+
+  String get amountFormatted => formatKes(amountValue);
+
+  /// Why the current amount can't be paid, or null when it can.
+  String? get amountError {
+    if (amountValue <= 0) return 'Enter an amount to pay';
+    if (paymentMethod == PayRentMethod.mpesa &&
+        amountValue > kMpesaMaxPerTransaction) {
+      return 'M-Pesa takes up to ${formatKes(kMpesaMaxPerTransaction)} per payment';
     }
+    return null;
   }
 
-  String get amountFormatted {
-    switch (amountOption) {
-      case PayRentAmountOption.fullBalance:
-        return 'KES 45,000';
-      case PayRentAmountOption.half:
-        return 'KES 22,500';
-    }
-  }
+  /// Amount above the balance that will carry forward as credit.
+  int get creditAfterPayment =>
+      amountValue > fullBalance ? amountValue - fullBalance : 0;
+
+  bool get canSubmit => step == PayRentStep.form && amountError == null;
 
   HomePayRentUiState copyWith({
     bool? isPayRentOpen,
+    int? fullBalance,
     PayRentAmountOption? amountOption,
+    String? otherAmountText,
     PayRentMethod? paymentMethod,
-    String? mpesaNumber,
     PayRentStep? step,
     ValueGetter<PaymentReceipt?>? completedReceipt,
     bool? showingReceiptDetail,
-    bool? isBalancePaid,
   }) {
     return HomePayRentUiState(
       isPayRentOpen: isPayRentOpen ?? this.isPayRentOpen,
+      fullBalance: fullBalance ?? this.fullBalance,
       amountOption: amountOption ?? this.amountOption,
+      otherAmountText: otherAmountText ?? this.otherAmountText,
       paymentMethod: paymentMethod ?? this.paymentMethod,
-      mpesaNumber: mpesaNumber ?? this.mpesaNumber,
       step: step ?? this.step,
       completedReceipt: completedReceipt != null
           ? completedReceipt()
           : this.completedReceipt,
       showingReceiptDetail: showingReceiptDetail ?? this.showingReceiptDetail,
-      isBalancePaid: isBalancePaid ?? this.isBalancePaid,
     );
   }
 }

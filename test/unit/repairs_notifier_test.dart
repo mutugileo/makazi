@@ -80,9 +80,9 @@ void main() {
       expect(updatedState.isSubmitting, isFalse);
       expect(updatedState.isNewRequestOpen, isFalse);
       expect(updatedState.tickets.length, 2);
-      expect(updatedState.tickets.first.id, 'MT-1040');
+      expect(updatedState.tickets.first.id, 'MT-1048');
       expect(updatedState.tickets.first.category, RepairCategory.carpentry);
-      expect(updatedState.tickets.first.status, RepairStatus.inReview);
+      expect(updatedState.tickets.first.status, RepairStatus.open);
       expect(updatedState.tickets.first.hasPhoto, isTrue);
       expect(updatedState.newlyCreatedTicket, isNotNull);
     });

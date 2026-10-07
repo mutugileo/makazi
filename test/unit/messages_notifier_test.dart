@@ -12,7 +12,9 @@ void main() {
 
       expect(messages.length, 2);
       expect(messages.first.isUserMessage, isTrue);
+      expect(messages.first.timestamp, 'Yesterday');
       expect(messages.last.isUserMessage, isFalse);
+      expect(messages.last.timestamp, 'Today, 09:12');
     });
 
     test('dispatchUserMessage appends trimmed message to list', () {

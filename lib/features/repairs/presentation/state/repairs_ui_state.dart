@@ -11,24 +11,17 @@ class RepairsUiState {
     this.attachedPhotoCount = 0,
     this.isSubmitting = false,
     this.newlyCreatedTicket,
+    this.submitError,
   });
 
-  const RepairsUiState.initial()
-    : tickets = const [
-        RepairTicket(
-          id: 'MT-1039',
-          category: RepairCategory.electrical,
-          title: 'Socket in bedroom sparks',
-          subtitle: 'Fixed by Otieno Fundi Services, 24 Sep',
-          status: RepairStatus.resolved,
-        ),
-      ],
-      isNewRequestOpen = false,
+  const RepairsUiState.initial(this.tickets)
+    : isNewRequestOpen = false,
       selectedCategory = RepairCategory.plumbing,
       description = '',
       attachedPhotoCount = 0,
       isSubmitting = false,
-      newlyCreatedTicket = null;
+      newlyCreatedTicket = null,
+      submitError = null;
 
   final List<RepairTicket> tickets;
   final bool isNewRequestOpen;
@@ -37,6 +30,9 @@ class RepairsUiState {
   final int attachedPhotoCount;
   final bool isSubmitting;
   final RepairTicket? newlyCreatedTicket;
+
+  /// Set when the request couldn't be saved; the form stays open.
+  final String? submitError;
 
   bool get canSubmit =>
       selectedCategory != null &&
@@ -51,6 +47,7 @@ class RepairsUiState {
     int? attachedPhotoCount,
     bool? isSubmitting,
     ValueGetter<RepairTicket?>? newlyCreatedTicket,
+    ValueGetter<String?>? submitError,
   }) {
     return RepairsUiState(
       tickets: tickets ?? this.tickets,
@@ -64,6 +61,7 @@ class RepairsUiState {
       newlyCreatedTicket: newlyCreatedTicket != null
           ? newlyCreatedTicket()
           : this.newlyCreatedTicket,
+      submitError: submitError != null ? submitError() : this.submitError,
     );
   }
 
@@ -77,7 +75,8 @@ class RepairsUiState {
         other.description == description &&
         other.attachedPhotoCount == attachedPhotoCount &&
         other.isSubmitting == isSubmitting &&
-        other.newlyCreatedTicket == newlyCreatedTicket;
+        other.newlyCreatedTicket == newlyCreatedTicket &&
+        other.submitError == submitError;
   }
 
   @override
@@ -89,5 +88,6 @@ class RepairsUiState {
     attachedPhotoCount,
     isSubmitting,
     newlyCreatedTicket,
+    submitError,
   );
 }

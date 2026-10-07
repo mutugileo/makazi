@@ -1,22 +1,39 @@
 import 'package:flutter/foundation.dart';
 import '../../domain/models/payment_receipt.dart';
 
+enum PaymentsView { bills, receipts }
+
 @immutable
 class PaymentsUiState {
-  const PaymentsUiState({required this.receipts, this.selectedReceipt});
+  const PaymentsUiState({
+    this.view = PaymentsView.bills,
+    this.selectedBillMonth,
+    this.selectedReceipt,
+    this.showingStatement = false,
+  });
 
-  final List<PaymentReceipt> receipts;
+  final PaymentsView view;
+
+  /// 'YYYY-MM' of the bill being viewed.
+  final String? selectedBillMonth;
   final PaymentReceipt? selectedReceipt;
+  final bool showingStatement;
 
   PaymentsUiState copyWith({
-    List<PaymentReceipt>? receipts,
+    PaymentsView? view,
+    String? Function()? selectedBillMonth,
     PaymentReceipt? Function()? selectedReceipt,
+    bool? showingStatement,
   }) {
     return PaymentsUiState(
-      receipts: receipts ?? this.receipts,
+      view: view ?? this.view,
+      selectedBillMonth: selectedBillMonth != null
+          ? selectedBillMonth()
+          : this.selectedBillMonth,
       selectedReceipt: selectedReceipt != null
           ? selectedReceipt()
           : this.selectedReceipt,
+      showingStatement: showingStatement ?? this.showingStatement,
     );
   }
 
@@ -24,10 +41,12 @@ class PaymentsUiState {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is PaymentsUiState &&
-          runtimeType == other.runtimeType &&
-          listEquals(receipts, other.receipts) &&
-          selectedReceipt == other.selectedReceipt;
+          view == other.view &&
+          selectedBillMonth == other.selectedBillMonth &&
+          selectedReceipt == other.selectedReceipt &&
+          showingStatement == other.showingStatement;
 
   @override
-  int get hashCode => Object.hash(receipts, selectedReceipt);
+  int get hashCode =>
+      Object.hash(view, selectedBillMonth, selectedReceipt, showingStatement);
 }

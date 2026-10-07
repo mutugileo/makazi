@@ -4,8 +4,13 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 
 class ActionNeededCard extends StatelessWidget {
-  const ActionNeededCard({super.key, required this.onActionPressed});
+  const ActionNeededCard({
+    super.key,
+    required this.subtitle,
+    required this.onActionPressed,
+  });
 
+  final String subtitle;
   final VoidCallback onActionPressed;
 
   @override
@@ -49,7 +54,7 @@ class ActionNeededCard extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
-                      'From 1 Nov 2026 · KES 94,500 / month',
+                      subtitle,
                       style: AppTypography.sans(
                         fontSize: 13,
                         color: AppColors.textMuted,

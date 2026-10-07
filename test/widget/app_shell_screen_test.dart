@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:prop_mgt_app/app.dart';
+import '../helpers/unlocked_app.dart';
 
 void main() {
   testWidgets(
@@ -12,12 +11,13 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(const ProviderScope(child: PropMgtApp()));
+      await tester.pumpWidget(unlockedApp());
       await tester.pumpAndSettle();
 
       expect(find.text('Habari, David'), findsOneWidget);
+      expect(find.text('Riverside Court · 5A'), findsOneWidget);
       expect(find.text('Balance due'), findsOneWidget);
-      expect(find.text('KES 45,000'), findsWidgets);
+      expect(find.text('KES 18,950'), findsWidgets);
       expect(find.text('Pay rent'), findsOneWidget);
 
       final paymentsTab = find.text('Payments');
@@ -26,17 +26,31 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Payments'), findsWidgets);
-      expect(find.text('Paid in 2026'), findsOneWidget);
-      expect(find.text('KES 855,000'), findsOneWidget);
-      expect(find.text('RECEIPTS'), findsOneWidget);
+      expect(find.text('Paid since May'), findsOneWidget);
+      expect(find.text('KES 173,200'), findsOneWidget);
+      expect(find.text('KES 30,000'), findsOneWidget, reason: 'deposit held');
 
-      final firstReceipt = find.text('RCT-2610-0416');
+      // Bills list, newest first, with spreadsheet-style statuses.
+      expect(find.text('October 2026'), findsOneWidget);
+      expect(find.text('Partial'), findsNWidgets(2));
+      await tester.tap(find.text('October 2026'));
+      await tester.pumpAndSettle();
+      expect(find.text('Water'), findsOneWidget);
+      expect(find.text('15 units × KES 150'), findsOneWidget);
+      expect(find.text('Balance from September'), findsOneWidget);
+      expect(find.textContaining('units used in September'), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.chevron_left_rounded));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Receipts'));
+      await tester.pumpAndSettle();
+      final firstReceipt = find.text('RCT-2610-0373 · 02 Oct 2026');
       expect(firstReceipt, findsOneWidget);
       await tester.tap(firstReceipt);
       await tester.pumpAndSettle();
 
       expect(find.text('Receipt'), findsWidgets);
-      expect(find.text('Jengo Property Management'), findsOneWidget);
+      expect(find.text('HarborRidge Limited'), findsOneWidget);
       expect(find.text('KRA PIN P051234567X'), findsOneWidget);
       final downloadBtn = find.text('Download PDF');
       expect(downloadBtn, findsOneWidget);
@@ -44,7 +58,12 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(downloadBtn);
       await tester.pump();
-      expect(find.text('Downloading receipt RCT-2610-0416...'), findsOneWidget);
+      expect(
+        find.text(
+          'PDF receipts not available yet. They arrive with the database.',
+        ),
+        findsOneWidget,
+      );
       await tester.pumpAndSettle();
 
       final backButton = find.byIcon(Icons.chevron_left_rounded);
@@ -54,7 +73,7 @@ void main() {
       await tester.tap(backButton);
       await tester.pumpAndSettle();
 
-      expect(find.text('RECEIPTS'), findsOneWidget);
+      expect(find.text('Receipts'), findsOneWidget);
 
       final repairsTab = find.text('Repairs').last;
       await tester.tap(repairsTab);
@@ -69,7 +88,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Njoki Kariuki'), findsOneWidget);
-      expect(find.text('Property manager · Jengo'), findsOneWidget);
+      expect(find.text('Property manager · HarborRidge'), findsOneWidget);
       expect(find.text('Message'), findsOneWidget);
     },
   );

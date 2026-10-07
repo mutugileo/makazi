@@ -1,11 +1,11 @@
 {
-    "name": "prop_mgt_app",
-    "short_name": "prop_mgt_app",
+    "name": "Makazi",
+    "short_name": "Makazi",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F3F4F0",
+    "theme_color": "#0D382B",
+    "description": "Makazi: rent, bills and repairs for tenants.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

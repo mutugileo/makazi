@@ -4,6 +4,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_motion.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../billing/presentation/state/tenant_account_providers.dart';
+import '../../../../core/widgets/empty_state.dart';
 import '../../domain/models/repair_ticket.dart';
 import '../state/repairs_providers.dart';
 import '../widgets/report_repair_form_view.dart';
@@ -72,7 +74,11 @@ class RepairsScreen extends ConsumerWidget {
               : _RepairsListView(
                   key: const ValueKey('repairs_list_view'),
                   tickets: state.tickets,
-                  onNewRequestPressed: notifier.openNewRequest,
+                  // Former tenants keep their history but can't raise new
+                  // requests (enforced by RLS in Phase 2).
+                  onNewRequestPressed: ref.watch(tenantAccountProvider).isActive
+                      ? notifier.openNewRequest
+                      : null,
                 ),
         ),
       ),
@@ -88,7 +94,7 @@ class _RepairsListView extends StatelessWidget {
   });
 
   final List<RepairTicket> tickets;
-  final VoidCallback onNewRequestPressed;
+  final VoidCallback? onNewRequestPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -123,32 +129,41 @@ class _RepairsListView extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              ElevatedButton(
-                onPressed: onNewRequestPressed,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.forestGreen,
-                  foregroundColor: AppColors.pureWhite,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
+              if (onNewRequestPressed != null)
+                ElevatedButton(
+                  onPressed: onNewRequestPressed,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.forestGreen,
+                    foregroundColor: AppColors.pureWhite,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
+                  child: Text(
+                    'New request',
+                    style: AppTypography.sans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.pureWhite,
+                    ),
                   ),
                 ),
-                child: Text(
-                  'New request',
-                  style: AppTypography.sans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.pureWhite,
-                  ),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
+          if (tickets.isEmpty)
+            EmptyState(
+              icon: Icons.build_outlined,
+              title: 'No repair requests yet',
+              message: onNewRequestPressed == null
+                  ? 'Your tenancy has ended, so new requests are closed.'
+                  : 'Report a problem and follow it here until it is fixed.',
+            ),
           for (int i = 0; i < tickets.length; i++) ...[
             _RepairTicketCard(ticket: tickets[i]),
             if (i < tickets.length - 1) const SizedBox(height: AppSpacing.sm),
@@ -247,13 +262,13 @@ class _RepairStatusBadge extends StatelessWidget {
         AppColors.statusResolvedBackground,
         AppColors.statusResolvedText,
       ),
-      RepairStatus.inReview => (
-        const Color(0xFFFEF3C7),
-        const Color(0xFFB45309),
+      RepairStatus.open => (
+        AppColors.statusPartialBackground,
+        AppColors.statusPartialText,
       ),
       RepairStatus.inProgress => (
-        const Color(0xFFE0F2FE),
-        const Color(0xFF0369A1),
+        AppColors.statusCreditBackground,
+        AppColors.statusCreditText,
       ),
     };
 
