@@ -24,6 +24,16 @@ create table if not exists public.suspense_payments (
 create index if not exists suspense_payments_company_idx on public.suspense_payments (company_id, status);
 create index if not exists suspense_payments_trans_idx on public.suspense_payments (trans_id);
 
+-- Row-level security: without it, any signed-in user could read every
+-- company's unmatched payments (phone numbers, transaction ids).
+alter table public.suspense_payments enable row level security;
+
+-- Only a company's admins see its suspense queue. Writes come from the
+-- service role (the Daraja callback and the superadmin site).
+create policy suspense_payments_admin_read on public.suspense_payments for select to authenticated
+  using (company_id in (select app.admin_company_ids()));
+
 -- Grants
+revoke all on public.suspense_payments from anon;
 grant select, insert, update on public.suspense_payments to service_role;
 grant select on public.suspense_payments to authenticated;

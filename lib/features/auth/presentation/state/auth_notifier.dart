@@ -92,12 +92,10 @@ class AuthNotifier extends Notifier<AuthState> {
       SignInOutcome.mustChangePassword => AuthState(
         stage: AuthStage.mustChangePassword,
         phone: normalized,
-        firstName: _firstNameForPhone(normalized),
       ),
       SignInOutcome.success => AuthState(
         stage: AuthStage.createPin,
         phone: normalized,
-        firstName: _firstNameForPhone(normalized),
       ),
     };
   }
@@ -162,7 +160,7 @@ class AuthNotifier extends Notifier<AuthState> {
     _pin = pin;
     final phone = state.phone ?? '';
     final userId = _repository.currentUserId ?? 'user-$phone';
-    final firstName = state.firstName ?? _firstNameForPhone(phone);
+    final firstName = state.firstName;
 
     final lock = DeviceLock.create(
       userId: userId,
@@ -349,12 +347,4 @@ class AuthNotifier extends Notifier<AuthState> {
     );
   }
 
-  String? _firstNameForPhone(String phone) {
-    return switch (phone) {
-      '+254733605118' => 'David',
-      '+254723555019' => 'Naliaka',
-      '+254720671093' => 'Joseph',
-      _ => null,
-    };
-  }
 }

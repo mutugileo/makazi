@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/config/demo_data.dart';
 import '../../data/auth_repository.dart';
 import '../../data/demo_credentials.dart';
 import '../state/auth_providers.dart';
 import '../widgets/auth_scaffold.dart';
+import '../widgets/tenant_faq_dialog.dart';
 
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
@@ -57,7 +59,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final state = ref.watch(authProvider);
     // Only the prototype's demo sign-in shows this; the Supabase repository
     // in Phase 2 never does.
-    final isDemo = ref.watch(authRepositoryProvider) is DemoAuthRepository;
+    final isDemo =
+        kDemoDataAvailable && ref.watch(authRepositoryProvider) is DemoAuthRepository;
 
     return AuthScaffold(
       title: 'Sign in',
@@ -121,6 +124,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 color: AppColors.textMuted,
                 height: 1.4,
               ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            TextButton.icon(
+              key: const ValueKey('sign_in_faq'),
+              onPressed: () => showTenantFaqDialog(context),
+              icon: const Icon(Icons.help_outline),
+              label: const Text('Frequently asked questions'),
             ),
             if (isDemo)
               for (final account in kDemoAccounts) ...[

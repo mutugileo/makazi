@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/billing/billing_models.dart';
 import '../../../../core/billing/seed/tenant_seed.g.dart';
+import '../../../../core/config/demo_data.dart';
 import '../../../../core/data/data_mode.dart';
 import '../../../../core/models/payment_receipt.dart';
 import '../../../auth/presentation/state/auth_providers.dart';
@@ -17,15 +18,19 @@ import 'tenant_account_state.dart';
 class TenantAccountNotifier extends Notifier<TenantAccountState> {
   @override
   TenantAccountState build() {
-    if (ref.watch(liveDataProvider)) {
-      final seed = ref.watch(liveTenantSeedProvider).value;
-      if (seed != null) return TenantAccountState.fromSeed(seed);
-      // Signing out: keep the last account while the shell fades away.
-      final previous = stateOrNull;
-      if (previous != null) return previous;
-      throw StateError('Tenant data has not loaded');
+    if (kDemoDataAvailable && !ref.watch(liveDataProvider)) {
+      return _demoAccount();
     }
 
+    final seed = ref.watch(liveTenantSeedProvider).value;
+    if (seed != null) return TenantAccountState.fromSeed(seed);
+    // Signing out: keep the last account while the shell fades away.
+    final previous = stateOrNull;
+    if (previous != null) return previous;
+    throw StateError('Tenant data has not loaded');
+  }
+
+  TenantAccountState _demoAccount() {
     final phone = ref.watch(authProvider.select((s) => s.phone));
     final json =
         kTenantSeedsByPhone[phone ?? kDefaultTenantPhone] ??
