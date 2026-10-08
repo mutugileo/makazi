@@ -58,7 +58,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
     final systemBottomPadding = mediaQuery.padding.bottom;
     final inputBottomPadding = isKeyboardOpen
         ? AppSpacing.xs
-        : systemBottomPadding + 74.0;
+        : systemBottomPadding + AppSpacing.xs;
 
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
