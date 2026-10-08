@@ -86,14 +86,23 @@ void main() {
     });
 
     test(
-      'submitPayment records the payment before showing it received',
+      'Pay now sends the request; approving records it before showing it received',
       () async {
         final container = ProviderContainer();
         addTearDown(container.dispose);
         final notifier = container.read(homePayRentProvider.notifier)
           ..openPayRent();
 
-        final future = notifier.submitPayment();
+        final sending = notifier.submitPayment();
+        expect(
+          container.read(homePayRentProvider).step,
+          PayRentStep.awaitingApproval,
+        );
+        expect(container.read(homePayRentProvider).promptShown, isFalse);
+        await sending;
+        expect(container.read(homePayRentProvider).promptShown, isTrue);
+
+        final future = notifier.approveMpesaPush();
         expect(
           container.read(homePayRentProvider).step,
           PayRentStep.confirming,
@@ -120,6 +129,7 @@ void main() {
         ..updateOtherAmount('10000');
 
       await notifier.submitPayment();
+      await notifier.approveMpesaPush();
 
       expect(
         container.read(homePayRentProvider).completedReceipt?.forDescription,
@@ -134,10 +144,27 @@ void main() {
       final notifier = container.read(homePayRentProvider.notifier)
         ..openPayRent();
 
-      final future = notifier.submitPayment();
+      await notifier.submitPayment();
+      final future = notifier.approveMpesaPush();
       notifier.closePayRent();
       expect(container.read(homePayRentProvider).isPayRentOpen, isTrue);
       await future;
+    });
+
+    test('declining on the phone pays nothing and says so', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final notifier = container.read(homePayRentProvider.notifier)
+        ..openPayRent();
+
+      await notifier.submitPayment();
+      notifier.declineMpesaPush();
+
+      final state = container.read(homePayRentProvider);
+      expect(state.step, PayRentStep.form);
+      expect(state.errorText, contains('declined'));
+      expect(state.completedReceipt, isNull);
+      expect(container.read(tenantAccountProvider).balance, 18950);
     });
 
     test('viewCompletedReceipt and closeReceiptDetail toggle state', () async {
@@ -147,6 +174,7 @@ void main() {
         ..openPayRent();
 
       await notifier.submitPayment();
+      await notifier.approveMpesaPush();
       notifier.viewCompletedReceipt();
       expect(container.read(homePayRentProvider).showingReceiptDetail, isTrue);
 

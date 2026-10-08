@@ -16,6 +16,7 @@ class PaymentReceipt {
     required this.reference,
     required this.forDescription,
     required this.billMonth,
+    this.isTest = false,
   });
 
   final String receiptNumber;
@@ -39,6 +40,9 @@ class PaymentReceipt {
   /// The bill this payment counted towards ('YYYY-MM').
   final String billMonth;
 
+  /// From M-Pesa test mode: recorded, but no money moved.
+  final bool isTest;
+
   String get id => receiptNumber;
   String get amountLabel => formatKes(amount);
   String get dateLabel => BillingDates.formatDate(date);
@@ -46,6 +50,9 @@ class PaymentReceipt {
   /// '02 Oct 2026, 08:14', as on the admin's receipt.
   String get dateTimeLabel => '$dateLabel, $time';
   String get initial => method.substring(0, 1);
+
+  /// 'M-Pesa', or 'M-Pesa (test)' for an M-Pesa test-mode payment.
+  String get methodLabel => isTest ? '$method (test)' : method;
 
   @override
   bool operator ==(Object other) =>

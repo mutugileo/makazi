@@ -52,6 +52,9 @@ class PayRentFlowView extends ConsumerWidget {
         PayRentStep.form => _PayRentFormView(
           key: const ValueKey('pay_rent_form_view'),
         ),
+        PayRentStep.awaitingApproval => _MpesaPromptView(
+          key: const ValueKey('pay_rent_prompt_view'),
+        ),
         PayRentStep.confirming => _ConfirmingPaymentView(
           key: const ValueKey('pay_rent_confirming_view'),
         ),
@@ -75,6 +78,8 @@ class _PayRentFormView extends ConsumerWidget {
     // Until M-Pesa (Daraja) is connected, the live app shows Paybill details
     // instead of a simulated STK push: only a real payment makes a receipt.
     final isLive = ref.watch(liveDataProvider);
+    final testMode = isLive && company.settings.mpesaSimulation;
+    final canPush = !isLive || testMode;
     final amountError = state.amountError;
     final showError =
         amountError != null &&
@@ -257,7 +262,7 @@ class _PayRentFormView extends ConsumerWidget {
             const SizedBox(height: AppSpacing.xl),
             _PaymentMethodCard(
               title: 'M-Pesa',
-              subtitle: isLive
+              subtitle: !canPush
                   ? 'Paybill ${company.mpesaPaybill} · '
                         'Account ${account.accountNumber}'
                   : 'STK push to your phone · Paybill ${company.mpesaPaybill} · '
@@ -274,7 +279,7 @@ class _PayRentFormView extends ConsumerWidget {
                   notifier.selectPaymentMethod(PayRentMethod.bankTransfer),
             ),
             const SizedBox(height: AppSpacing.lg),
-            if (state.paymentMethod == PayRentMethod.mpesa && isLive) ...[
+            if (state.paymentMethod == PayRentMethod.mpesa && !canPush) ...[
               Container(
                 key: const ValueKey('mpesa_paybill_details'),
                 width: double.infinity,
@@ -305,13 +310,12 @@ class _PayRentFormView extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              _CopyDetailsButton(
-                label: 'Copy Paybill details',
-                text:
-                    'Paybill: ${company.mpesaPaybill}\n'
-                    'Account: ${account.accountNumber}\n'
-                    'Amount: ${state.amountFormatted}',
-                confirmation: 'Paybill details copied to clipboard',
+              _MpesaPayNowButton(
+                paybill: company.mpesaPaybill,
+                accountNumber: account.accountNumber,
+                amount: state.amountFormatted,
+                companyName: company.name,
+                enabled: state.amountError == null,
               ),
             ] else if (state.paymentMethod == PayRentMethod.mpesa) ...[
               Text(
@@ -343,11 +347,46 @@ class _PayRentFormView extends ConsumerWidget {
                   ),
                 ),
               ),
+              if (testMode) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Container(
+                  key: const ValueKey('mpesa_test_mode_note'),
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: AppColors.statusPartialBackground,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.statusPartialBorder),
+                  ),
+                  child: Text(
+                    'M-Pesa test mode: the request is simulated and no money '
+                    'moves. The payment is recorded as a test payment.',
+                    style: AppTypography.sans(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+              if (state.errorText != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  state.errorText!,
+                  key: const ValueKey('pay_rent_error'),
+                  style: AppTypography.sans(
+                    fontSize: 13,
+                    color: AppColors.statusUnpaidText,
+                    height: 1.4,
+                  ),
+                ),
+              ],
               const SizedBox(height: AppSpacing.lg),
               SizedBox(
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
+                  key: const ValueKey('mpesa_stk_pay_now'),
                   onPressed: state.canSubmit
                       ? () {
                           FocusScope.of(context).unfocus();
@@ -363,7 +402,7 @@ class _PayRentFormView extends ConsumerWidget {
                     ),
                   ),
                   child: Text(
-                    'Pay ${state.amountFormatted}',
+                    'Pay now',
                     style: AppTypography.sans(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -413,6 +452,178 @@ class _PayRentFormView extends ConsumerWidget {
   static String _spacedAccount(String account) => account
       .replaceAllMapped(RegExp(r'.{1,4}'), (m) => '${m.group(0)}  ')
       .trim();
+}
+
+/// M-Pesa in the live app. Until Daraja (STK push) is connected, "Pay now"
+/// walks the tenant through Lipa na M-Pesa with this bill's details; the
+/// receipt appears once the payment is recorded. Nothing here claims a
+/// payment went through.
+class _MpesaPayNowButton extends StatelessWidget {
+  const _MpesaPayNowButton({
+    required this.paybill,
+    required this.accountNumber,
+    required this.amount,
+    required this.companyName,
+    required this.enabled,
+  });
+
+  final String paybill;
+  final String accountNumber;
+  final String amount;
+  final String companyName;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: ElevatedButton(
+        key: const ValueKey('mpesa_pay_now'),
+        onPressed: enabled
+            ? () {
+                FocusScope.of(context).unfocus();
+                showModalBottomSheet<void>(
+                  context: context,
+                  backgroundColor: AppColors.cardBackground,
+                  showDragHandle: true,
+                  isScrollControlled: true,
+                  builder: (_) => _MpesaStepsSheet(
+                    paybill: paybill,
+                    accountNumber: accountNumber,
+                    amount: amount,
+                    companyName: companyName,
+                  ),
+                );
+              }
+            : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.mintAccent,
+          foregroundColor: AppColors.pureWhite,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: Text(
+          'Pay now',
+          style: AppTypography.sans(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: AppColors.pureWhite,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MpesaStepsSheet extends StatelessWidget {
+  const _MpesaStepsSheet({
+    required this.paybill,
+    required this.accountNumber,
+    required this.amount,
+    required this.companyName,
+  });
+
+  final String paybill;
+  final String accountNumber;
+  final String amount;
+  final String companyName;
+
+  @override
+  Widget build(BuildContext context) {
+    final steps = [
+      'Open M-Pesa and choose Lipa na M-Pesa, then Pay Bill',
+      'Business number: $paybill',
+      'Account number: $accountNumber',
+      'Amount: $amount',
+      'Enter your M-Pesa PIN and confirm',
+    ];
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          0,
+          AppSpacing.lg,
+          AppSpacing.lg,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Pay with M-Pesa',
+              style: AppTypography.editorialSerif(
+                fontSize: 28,
+                fontWeight: FontWeight.w400,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            for (var i = 0; i < steps.length; i++) ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(
+                      color: AppColors.mintBackground,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '${i + 1}',
+                      style: AppTypography.sans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.mintAccent,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        steps[i],
+                        style: AppTypography.sans(
+                          fontSize: 15,
+                          color: AppColors.textPrimary,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (i < steps.length - 1) const SizedBox(height: AppSpacing.sm),
+            ],
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Your receipt appears in Payments once $companyName records '
+              'the payment.',
+              style: AppTypography.sans(
+                fontSize: 13,
+                color: AppColors.textMuted,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            _CopyDetailsButton(
+              label: 'Copy Paybill details',
+              text:
+                  'Paybill: $paybill\n'
+                  'Account: $accountNumber\n'
+                  'Amount: $amount',
+              confirmation: 'Paybill details copied to clipboard',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _CopyDetailsButton extends StatelessWidget {
@@ -727,12 +938,226 @@ class _ConfirmingPaymentView extends ConsumerWidget {
   }
 }
 
+/// The M-Pesa request as it reaches the tenant's phone. In the live app this
+/// is M-Pesa test mode, so the prompt is shown here in the app. It never
+/// asks for the M-Pesa PIN: a real prompt comes from the phone itself, and
+/// Makazi must not teach tenants to type their PIN into an app.
+class _MpesaPromptView extends ConsumerWidget {
+  const _MpesaPromptView({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(homePayRentProvider);
+    final notifier = ref.read(homePayRentProvider.notifier);
+    final account = ref.watch(tenantAccountProvider);
+    final company = account.company;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        AppSpacing.xxl + AppSpacing.xl,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              GestureDetector(
+                onTap: notifier.declineMpesaPush,
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: const BoxDecoration(
+                    color: AppColors.cardBackground,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.chevron_left_rounded,
+                    size: 24,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Text(
+                  'Pay rent',
+                  style: AppTypography.editorialSerif(
+                    fontSize: 34,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.5,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 48),
+          const Center(
+            child: Icon(
+              Icons.phone_iphone_rounded,
+              size: 44,
+              color: AppColors.mintAccent,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Center(
+            child: Text(
+              state.promptShown ? 'Check your phone' : 'Sending request…',
+              style: AppTypography.editorialSerif(
+                fontSize: 30,
+                fontWeight: FontWeight.w400,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Center(
+            child: Text(
+              'M-Pesa request to ${account.tenant.phone}',
+              textAlign: TextAlign.center,
+              style: AppTypography.sans(
+                fontSize: 15,
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            child: !state.promptShown
+                ? const Center(
+                    key: ValueKey('mpesa_prompt_sending'),
+                    child: Padding(
+                      padding: EdgeInsets.all(AppSpacing.lg),
+                      child: CircularProgressIndicator(
+                        color: AppColors.mintAccent,
+                        backgroundColor: AppColors.mintBackground,
+                      ),
+                    ),
+                  )
+                : Container(
+                    key: const ValueKey('mpesa_prompt_card'),
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2B2F2D),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.18),
+                          blurRadius: 18,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'M-PESA',
+                          style: AppTypography.sans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.limeAccent,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          'Pay ${state.amountFormatted} to '
+                          '${company.name.toUpperCase()}, Paybill '
+                          '${company.mpesaPaybill}, account '
+                          '${account.accountNumber}?',
+                          style: AppTypography.sans(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.pureWhite,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          'A real request asks for your M-Pesa PIN on your '
+                          'phone\'s own M-Pesa screen. Makazi never asks for it.',
+                          style: AppTypography.sans(
+                            fontSize: 12,
+                            color: const Color(0xFFB9C2BD),
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                key: const ValueKey('mpesa_prompt_decline'),
+                                onPressed: notifier.declineMpesaPush,
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.pureWhite,
+                                  side: const BorderSide(
+                                    color: Color(0xFF59615D),
+                                  ),
+                                  minimumSize: const Size.fromHeight(48),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                ),
+                                child: const Text('Decline'),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: ElevatedButton(
+                                key: const ValueKey('mpesa_prompt_approve'),
+                                onPressed: notifier.approveMpesaPush,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.limeAccent,
+                                  foregroundColor: AppColors.forestGreenDark,
+                                  elevation: 0,
+                                  minimumSize: const Size.fromHeight(48),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                ),
+                                child: const Text('Approve'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Center(
+            child: Text(
+              ref.watch(liveDataProvider)
+                  ? 'M-Pesa test mode: no money moves.'
+                  : 'Demo: no money moves.',
+              style: AppTypography.sans(
+                fontSize: 12,
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PaymentReceivedView extends ConsumerWidget {
   const _PaymentReceivedView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(homePayRentProvider);
+    final receipt = state.completedReceipt;
     final notifier = ref.read(homePayRentProvider.notifier);
 
     return SingleChildScrollView(
@@ -828,37 +1253,65 @@ class _PaymentReceivedView extends ConsumerWidget {
           const SizedBox(height: 6),
           Center(
             child: Text(
-              '${state.completedReceipt?.receiptNumber ?? 'RCT-2610-0423'} · ${state.completedReceipt?.reference ?? 'SJAEEMDE4J'}',
+              receipt == null
+                  ? 'Your receipt will appear in Payments shortly.'
+                  : '${receipt.receiptNumber} · ${receipt.reference}',
               style: AppTypography.sans(
                 fontSize: 13,
                 color: AppColors.textMuted,
               ),
             ),
           ),
-          const SizedBox(height: 40),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: OutlinedButton(
-              onPressed: notifier.viewCompletedReceipt,
-              style: OutlinedButton.styleFrom(
-                backgroundColor: AppColors.cardBackground,
-                foregroundColor: AppColors.textPrimary,
-                side: const BorderSide(color: AppColors.borderLight),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+          if (receipt?.isTest ?? false) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Center(
+              child: Container(
+                key: const ValueKey('test_payment_pill'),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 5,
                 ),
-              ),
-              child: Text(
-                'View receipt',
-                style: AppTypography.sans(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                decoration: BoxDecoration(
+                  color: AppColors.statusPartialBackground,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                  border: Border.all(color: AppColors.statusPartialBorder),
+                ),
+                child: Text(
+                  'Test payment · no money moved',
+                  style: AppTypography.sans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.statusPartialText,
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
+          const SizedBox(height: 40),
+          if (receipt != null)
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: OutlinedButton(
+                onPressed: notifier.viewCompletedReceipt,
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: AppColors.cardBackground,
+                  foregroundColor: AppColors.textPrimary,
+                  side: const BorderSide(color: AppColors.borderLight),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  'View receipt',
+                  style: AppTypography.sans(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ),
           const SizedBox(height: AppSpacing.sm),
           SizedBox(
             width: double.infinity,

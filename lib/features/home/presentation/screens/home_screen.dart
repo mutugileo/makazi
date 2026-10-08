@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../notifications/presentation/widgets/notification_cards.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/billing/billing_engine.dart';
 import '../../../../core/config/features.dart';
@@ -201,6 +202,7 @@ class _HomeDashboardView extends StatelessWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.md),
+            const NotificationCards(),
             HeroBalanceCard(
               bill: account.currentBill,
               isActive: account.isActive,

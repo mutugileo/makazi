@@ -43,6 +43,7 @@ class TenantAccountState {
             reference: payment.reference,
             forDescription: engine.receiptDescription(bill, payment),
             billMonth: bill.month,
+            isTest: payment.simulated,
           ),
     ].reversed.toList(growable: false);
 

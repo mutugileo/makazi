@@ -14,6 +14,8 @@ class HomePayRentUiState {
     required this.step,
     required this.completedReceipt,
     required this.showingReceiptDetail,
+    this.errorText,
+    this.promptShown = false,
   });
 
   const HomePayRentUiState.initial()
@@ -24,7 +26,9 @@ class HomePayRentUiState {
       paymentMethod = PayRentMethod.mpesa,
       step = PayRentStep.form,
       completedReceipt = null,
-      showingReceiptDetail = false;
+      showingReceiptDetail = false,
+      errorText = null,
+      promptShown = false;
 
   final bool isPayRentOpen;
 
@@ -36,6 +40,12 @@ class HomePayRentUiState {
   final PayRentStep step;
   final PaymentReceipt? completedReceipt;
   final bool showingReceiptDetail;
+
+  /// Why the last M-Pesa request didn't go through (declined, failed).
+  final String? errorText;
+
+  /// The M-Pesa request has reached the phone and is waiting for the tenant.
+  final bool promptShown;
 
   int get amountValue => switch (amountOption) {
     PayRentAmountOption.fullBalance => fullBalance,
@@ -69,6 +79,8 @@ class HomePayRentUiState {
     PayRentStep? step,
     ValueGetter<PaymentReceipt?>? completedReceipt,
     bool? showingReceiptDetail,
+    ValueGetter<String?>? errorText,
+    bool? promptShown,
   }) {
     return HomePayRentUiState(
       isPayRentOpen: isPayRentOpen ?? this.isPayRentOpen,
@@ -81,6 +93,8 @@ class HomePayRentUiState {
           ? completedReceipt()
           : this.completedReceipt,
       showingReceiptDetail: showingReceiptDetail ?? this.showingReceiptDetail,
+      errorText: errorText != null ? errorText() : this.errorText,
+      promptShown: promptShown ?? this.promptShown,
     );
   }
 }

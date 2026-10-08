@@ -167,7 +167,13 @@ class BillingEngine {
     final finalMonth = tenancy.moveOut == null
         ? maxActive
         : BillingDates.addMonths(BillingDates.monthOf(tenancy.moveOut!), 1);
-    final last = finalMonth.compareTo(maxActive) < 0 ? finalMonth : maxActive;
+    var last = finalMonth.compareTo(maxActive) < 0 ? finalMonth : maxActive;
+    // Paid before the first bill (deposit and rent ahead of moving in): issue
+    // the move-in bill so the payment has a bill to count against.
+    if (last.compareTo(first) < 0 &&
+        tenancyPayments.any((m) => m.compareTo(first) < 0)) {
+      last = first;
+    }
     return first.compareTo(last) <= 0 ? (first, last) : null;
   }
 
@@ -261,8 +267,13 @@ class BillingEngine {
           }
       }
 
+      // Payments made before the first bill count towards it.
       final monthPayments = payments
-          .where((p) => BillingDates.monthOf(p.date) == month)
+          .where((p) {
+            final paidIn = BillingDates.monthOf(p.date);
+            return paidIn == month ||
+                (month == window.$1 && paidIn.compareTo(month) < 0);
+          })
           .toList(growable: false);
       final bill = MonthlyBill(
         tenancyId: tenancy.id,

@@ -17,10 +17,11 @@ RepairTicket repairTicketFromRecord(RepairTicketRecord record) {
     RepairStatus.resolved =>
       'Fixed${record.assignedTo == null ? '' : ' by ${record.assignedTo}'}, '
           '${BillingDates.formatDayMonth((record.resolvedAt ?? record.createdAt).substring(0, 10))}',
-    RepairStatus.inProgress =>
-      'In progress${record.assignedTo == null ? '' : ' · ${record.assignedTo}'}',
+    // Who's going and when show in their own panel on the card.
+    RepairStatus.inProgress => 'Submitted $created · In progress',
     RepairStatus.open => 'Submitted $created · Open',
   };
+  final assignee = record.assignedTo;
   return RepairTicket(
     id: record.id,
     category: RepairCategory.fromWire(record.category),
@@ -29,7 +30,35 @@ RepairTicket repairTicketFromRecord(RepairTicketRecord record) {
     status: status,
     priority: RepairPriority.fromWire(record.priority),
     hasPhoto: record.hasPhoto,
+    visit: status == RepairStatus.inProgress && assignee != null
+        ? RepairVisit(
+            name: assignee,
+            phone: record.assignedPhone,
+            whenLabel: record.visitAt == null
+                ? null
+                : repairVisitLabel(record.visitAt!),
+          )
+        : null,
   );
+}
+
+/// "Thu 9 Oct, 2:00 pm" from a Nairobi-time ISO string, read as written
+/// (the offset is already Nairobi's), so the phone's own time zone can't
+/// shift it.
+String repairVisitLabel(String nairobiIso) {
+  final date = nairobiIso.substring(0, 10);
+  final weekday =
+      const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][DateTime.utc(
+            int.parse(date.substring(0, 4)),
+            int.parse(date.substring(5, 7)),
+            int.parse(date.substring(8, 10)),
+          ).weekday -
+          1];
+  final hour24 = int.parse(nairobiIso.substring(11, 13));
+  final minute = nairobiIso.substring(14, 16);
+  final hour12 = hour24 % 12 == 0 ? 12 : hour24 % 12;
+  final meridiem = hour24 < 12 ? 'am' : 'pm';
+  return '$weekday ${BillingDates.formatDayMonth(date)}, $hour12:$minute $meridiem';
 }
 
 List<RepairTicket> _ticketsNewestFirst(List<RepairTicketRecord> records) => [

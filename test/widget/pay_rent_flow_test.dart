@@ -44,11 +44,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('20,000'), findsOneWidget);
-    expect(find.text('Pay KES 20,000'), findsOneWidget);
+    expect(find.text('Pay now'), findsOneWidget);
 
     await tester.tap(find.text('Full balance · KES 18,950'));
     await tester.pumpAndSettle();
-    expect(find.text('Pay KES 18,950'), findsOneWidget);
+    expect(find.text('Pay now'), findsOneWidget);
 
     await tester.tap(find.text('Bank transfer'));
     await tester.pumpAndSettle();
@@ -60,7 +60,16 @@ void main() {
     await tester.tap(find.text('M-Pesa'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Pay KES 18,950'));
+    await tester.tap(find.text('Pay now'));
+    await tester.pump();
+    expect(find.text('Sending request…'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 1000));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Check your phone'), findsOneWidget);
+    // The simulated prompt never asks for the M-Pesa PIN.
+    expect(find.byType(TextField), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('mpesa_prompt_approve')));
     await tester.pump();
     expect(find.text('Confirming payment'), findsOneWidget);
 

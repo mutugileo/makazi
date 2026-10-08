@@ -152,7 +152,10 @@ class HeroBalanceCard extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
+                          // Wraps rather than cutting off large amounts
+                          // ("KES 182,500 paid of KES 182,500").
                           Expanded(
+                            flex: 3,
                             child: Text(
                               bill == null
                                   ? 'No bill yet'
@@ -161,14 +164,14 @@ class HeroBalanceCard extends StatelessWidget {
                                 fontSize: 13,
                                 color: AppColors.onDarkMuted,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              maxLines: 2,
                             ),
                           ),
                           const SizedBox(width: AppSpacing.xs),
                           // Flexible so longer labels ("Records until …") wrap
                           // instead of overflowing on small phones.
                           Flexible(
+                            flex: 2,
                             child: Text(
                               trailingLabel,
                               textAlign: TextAlign.end,

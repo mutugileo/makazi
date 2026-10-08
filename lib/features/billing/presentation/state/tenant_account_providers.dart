@@ -5,6 +5,7 @@ import '../../../../core/data/supabase_billing_providers.dart';
 import '../../../auth/domain/auth_models.dart';
 import '../../../auth/presentation/state/auth_providers.dart';
 import '../../../messages/presentation/state/messages_notifier.dart';
+import '../../../notifications/presentation/state/notifications_providers.dart';
 import 'tenant_account_notifier.dart';
 import 'tenant_account_state.dart';
 
@@ -56,7 +57,10 @@ final tenantRealtimeProvider = Provider<void>((ref) {
       .subscribe(
         companyId: ids.company,
         tenancyId: ids.tenancy,
-        onChanged: () => ref.invalidate(liveTenantSeedProvider),
+        onChanged: () {
+          ref.invalidate(liveTenantSeedProvider);
+          ref.invalidate(tenantNotificationsProvider);
+        },
         onTyping: (isTyping) {
           final typing = ref.read(managerTypingProvider.notifier);
           isTyping ? typing.showTyping() : typing.hideTyping();

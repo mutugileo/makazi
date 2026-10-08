@@ -192,7 +192,7 @@ class BillDetailView extends StatelessWidget {
                     ListTile(
                       onTap: () => onReceiptSelected(receipts[i]),
                       title: Text(
-                        '${receipts[i].dateLabel} · ${receipts[i].method}',
+                        '${receipts[i].dateLabel} · ${receipts[i].methodLabel}',
                         style: AppTypography.sans(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,

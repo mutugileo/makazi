@@ -72,7 +72,7 @@ class RecentTransactionsCard extends StatelessWidget {
                   initial: displayItems[i].initial,
                   title: displayItems[i].forDescription,
                   subtitle:
-                      '${displayItems[i].dateLabel} · ${displayItems[i].method}',
+                      '${displayItems[i].dateLabel} · ${displayItems[i].methodLabel}',
                   amount: displayItems[i].amountLabel,
                   onTap: () => onTransactionTapped?.call(i),
                 ),

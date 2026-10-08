@@ -217,7 +217,7 @@ class StatementView extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        '${r.dateLabel} · ${r.method} · ${r.receiptNumber}',
+                        '${r.dateLabel} · ${r.methodLabel} · ${r.receiptNumber}',
                         style: AppTypography.sans(
                           fontSize: 12,
                           color: AppColors.textSecondary,

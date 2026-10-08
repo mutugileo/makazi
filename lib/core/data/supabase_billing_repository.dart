@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../features/notifications/domain/tenant_notification.dart';
 import '../billing/billing_models.dart';
 
 /// Thrown when the signed-in account has no tenancy the app may show (not
@@ -254,6 +255,55 @@ class SupabaseBillingRepository {
     return messageFromRow(row);
   }
 
+  /// The tenant's latest notifications (newest first). RLS returns only
+  /// their own tenancy's.
+  Future<List<TenantNotification>> fetchNotifications({
+    required String companyId,
+    required String tenancyId,
+  }) async {
+    final rows = await _sb
+        .from('notifications')
+        .select()
+        .eq('company_id', companyId)
+        .eq('tenancy_id', tenancyId)
+        .order('created_at', ascending: false)
+        .limit(20)
+        .timeout(const Duration(seconds: 10));
+    return [for (final row in _rows(rows)) notificationFromRow(row)];
+  }
+
+  /// Marks one notification read. Throws if it wasn't saved.
+  Future<void> markNotificationRead(String id) async {
+    await _sb
+        .from('notifications')
+        .update({'read_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id)
+        .select('id')
+        .single();
+  }
+
+  static TenantNotification notificationFromRow(Map<String, dynamic> row) =>
+      TenantNotification(
+        id: row['id'] as String,
+        kind: row['kind'] as String,
+        title: row['title'] as String,
+        body: row['body'] as String,
+        createdAt: nairobiIso(row['created_at'] as String),
+        readAt: row['read_at'] == null
+            ? null
+            : nairobiIso(row['read_at'] as String),
+      );
+
+  /// M-Pesa test mode: records a simulated payment for the tenant's own
+  /// current tenancy (simulate_mpesa_payment). The database refuses unless
+  /// the company has test mode on. Returns the receipt number.
+  Future<String> simulateMpesaPayment(int amount) async {
+    final result = await _sb
+        .rpc('simulate_mpesa_payment', params: {'p_amount': amount})
+        .timeout(const Duration(seconds: 15));
+    return ((result as Map)['receiptNumber']) as String;
+  }
+
   /// Listens for the admin's "something changed" nudges. Payloads carry no
   /// data (PropAdmin/src/lib/realtime.ts); [onChanged] should refetch.
   TenantRealtime subscribe({
@@ -345,6 +395,7 @@ class SupabaseBillingRepository {
     time: (row['time'] as String).substring(0, 5),
     method: PaymentMethod.fromJson(row['method'] as String),
     reference: row['reference'] as String,
+    simulated: row['simulated'] == true,
   );
 
   static RepairTicketRecord ticketFromRow(Map<String, dynamic> row) =>
@@ -365,6 +416,10 @@ class SupabaseBillingRepository {
             : nairobiIso(row['resolved_at'] as String),
         assignedTo: row['assigned_to'] as String?,
         resolutionNote: row['resolution_note'] as String?,
+        assignedPhone: row['assigned_phone'] as String?,
+        visitAt: row['visit_at'] == null
+            ? null
+            : nairobiIso(row['visit_at'] as String),
       );
 
   static MessageRecord messageFromRow(Map<String, dynamic> row) =>

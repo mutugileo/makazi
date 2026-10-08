@@ -203,6 +203,16 @@ select tests.denied($q$insert into public.meter_readings (company_id, unit_id, m
                      values ('harborridge', 'mg-2', '2026-11', 999)$q$, 'caretaker reading another property''s meter');
 update public.repair_tickets set status = 'in_progress', assigned_to = 's-otieno' where id = 'MT-1044';
 select tests.denied($q$update public.repair_tickets set priority = 'low' where id = 'MT-1044'$q$, 'caretaker re-prioritising');
+-- Who's going and when: staff set it; the number must be a Kenyan mobile.
+update public.repair_tickets set assigned_phone = '+254712345678', visit_at = '2026-10-09 14:00+03'
+ where id = 'MT-1044';
+select tests.eq($q$select count(*) from public.repair_tickets where id = 'MT-1044' and assigned_phone = '+254712345678'$q$,
+                1, 'caretaker sets the visit details');
+do $$ begin
+  update public.repair_tickets set assigned_phone = '0712 345 678' where id = 'MT-1044';
+  raise exception 'FAIL: unnormalised phone stored';
+exception when check_violation then null;
+end $$;
 rollback;
 
 -- ---------------------------------------------------------------------------
@@ -238,6 +248,12 @@ insert into public.messages (company_id, tenancy_id, sender, body) values ('harb
 select tests.denied($q$insert into public.messages (company_id, tenancy_id, sender, staff_id, body)
                      values ('harborridge', 'L-2160', 'staff', 's-njoki', 'Posing as the manager')$q$, 'tenant posting as staff');
 select tests.no_rows($q$update public.tenancies set rent = 1 where id = 'L-2160'$q$, 'tenant changing rent');
+-- Tenants see the visit details but can't set or change them.
+select tests.no_rows($q$update public.repair_tickets set assigned_phone = '+254700000000' where tenancy_id = 'L-2160'$q$,
+                     'tenant changing the fundi''s number');
+select tests.denied($q$insert into public.repair_tickets (company_id, tenancy_id, unit_id, category, title, assigned_phone)
+                     values ('harborridge', 'L-2160', 'rc-5a', 'plumbing', 'Pre-assigned', '+254700000000')$q$,
+                    'tenant assigning their own fundi');
 select tests.denied($q$insert into public.payments (company_id, receipt_number, tenancy_id, amount, date, time, method, reference)
                      values ('harborridge', 'RCT-X', 'L-2160', 100, '2026-10-07', '10:00', 'M-Pesa', 'FAKE')$q$, 'tenant inserting a payment');
 select tests.no_rows($q$update public.messages set read_by_staff_at = now() where tenancy_id = 'L-2160'$q$, 'tenant marking read');
@@ -328,6 +344,98 @@ do $$ begin
   raise exception 'FAIL: duplicate M-Pesa callback recorded twice';
 exception when unique_violation then null;
 end $$;
+rollback;
+
+-- ---------------------------------------------------------------------------
+-- Notifications (payment reminders): staff send, each tenant sees only theirs.
+
+begin;
+insert into public.notifications (company_id, tenancy_id, kind, title, body) values
+  ('harborridge', 'L-2160', 'payment_reminder', 'Payment reminder', 'For David'),
+  ('harborridge', 'L-2172', 'payment_reminder', 'Payment reminder', 'For someone else'),
+  ('savanna', 'SV-102', 'payment_reminder', 'Payment reminder', 'For Naliaka');
+
+select tests.login('david');
+select tests.eq('select count(*) from public.notifications', 1, 'tenant sees only their notification');
+select tests.eq($q$with u as (update public.notifications set read_at = now() returning 1) select count(*) from u$q$,
+                1, 'tenant marks their own as read');
+select tests.denied($q$update public.notifications set body = 'edited'$q$, 'tenant editing a notification');
+select tests.denied($q$insert into public.notifications (company_id, tenancy_id, kind, title, body)
+                     values ('harborridge', 'L-2160', 'payment_reminder', 'Fake', 'Fake')$q$, 'tenant sending a notification');
+reset role;
+
+select tests.login('hr_owner');
+select tests.eq('select count(*) from public.notifications', 2, 'owner sees their company''s notifications');
+insert into public.notifications (company_id, tenancy_id, kind, title, body)
+values ('harborridge', 'L-2160', 'payment_reminder', 'Payment reminder', 'Second');
+select tests.denied($q$insert into public.notifications (company_id, tenancy_id, kind, title, body)
+                     values ('savanna', 'SV-102', 'payment_reminder', 'Payment reminder', 'Cross-company')$q$,
+                    'owner notifying another company''s tenant');
+reset role;
+
+set local role anon;
+select tests.denied('select * from public.notifications', 'anon reading notifications');
+rollback;
+
+-- ---------------------------------------------------------------------------
+-- M-Pesa test mode: simulated payments only when the company allows it,
+-- only for the caller's own current tenancy, always flagged.
+
+begin;
+select tests.login('david');
+select tests.denied($q$select public.simulate_mpesa_payment(5000)$q$, 'simulated payment while test mode is off');
+reset role;
+update public.companies set settings = settings || '{"mpesaSimulation": true}' where id = 'harborridge';
+
+select tests.login('david');
+select tests.eq($q$select count(*) from (select public.simulate_mpesa_payment(5000) r) x
+                   where r ->> 'tenancyId' = 'L-2160' and r ->> 'reference' like 'SIM%'
+                     and r ->> 'receiptNumber' like 'RCT-%'$q$, 1, 'tenant runs a simulated payment');
+select tests.eq($q$select count(*) from public.payments where simulated and tenancy_id = 'L-2160' and amount = 5000$q$,
+                1, 'simulated payment recorded and flagged');
+do $$ begin
+  perform public.simulate_mpesa_payment(0);
+  raise exception 'FAIL: zero amount accepted';
+exception when invalid_parameter_value then null;
+end $$;
+do $$ begin
+  perform public.simulate_mpesa_payment(250001);
+  raise exception 'FAIL: over the M-Pesa limit accepted';
+exception when invalid_parameter_value then null;
+end $$;
+-- Still no direct writes.
+select tests.denied($q$insert into public.payments (company_id, tenancy_id, amount, date, time, method, reference, simulated)
+                     values ('harborridge', 'L-2160', 1, '2026-10-08', '10:00', 'M-Pesa', 'SIMX', true)$q$, 'tenant inserting a simulated payment directly');
+reset role;
+
+-- Former tenants and staff accounts have no current tenancy to pay for.
+select tests.login('joseph');
+select tests.denied($q$select public.simulate_mpesa_payment(100)$q$, 'former tenant simulated payment');
+reset role;
+select tests.login('hr_owner');
+select tests.denied($q$select public.simulate_mpesa_payment(100)$q$, 'staff simulated payment');
+reset role;
+set local role anon;
+select tests.denied($q$select public.simulate_mpesa_payment(100)$q$, 'anon simulated payment');
+reset role;
+
+-- At most 10 a day.
+select tests.login('david');
+do $$ begin
+  for i in 1..9 loop perform public.simulate_mpesa_payment(100); end loop;
+  begin
+    perform public.simulate_mpesa_payment(100);
+    raise exception 'FAIL: eleventh test payment in a day accepted';
+  exception when program_limit_exceeded then null;
+  end;
+end $$;
+rollback;
+
+-- Another company's switch doesn't help.
+begin;
+update public.companies set settings = settings || '{"mpesaSimulation": true}' where id = 'harborridge';
+select tests.login('naliaka');
+select tests.denied($q$select public.simulate_mpesa_payment(100)$q$, 'tenant of a company with test mode off');
 rollback;
 
 drop schema tests cascade;

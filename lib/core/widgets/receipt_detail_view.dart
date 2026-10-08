@@ -149,7 +149,7 @@ class ReceiptDetailView extends StatelessWidget {
                 _DetailRow(label: 'Tenant', value: receipt.tenantName),
                 _DetailRow(label: 'Unit', value: receipt.unit),
                 _DetailRow(label: 'Date', value: receipt.dateTimeLabel),
-                _DetailRow(label: 'Method', value: receipt.method),
+                _DetailRow(label: 'Method', value: receipt.methodLabel),
                 _DetailRow(label: 'Reference', value: receipt.reference),
                 _DetailRow(label: 'For', value: receipt.forDescription),
               ],

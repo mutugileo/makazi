@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_motion.dart';
+import '../../../../core/theme/app_typography.dart';
+import '../../../notifications/presentation/state/notifications_providers.dart';
 import '../../../billing/presentation/state/tenant_account_providers.dart';
 import '../../../home/domain/models/pay_rent_models.dart';
 import '../../../home/presentation/screens/home_screen.dart';
@@ -25,6 +27,8 @@ class AppShellScreen extends ConsumerWidget {
     final motion =
         theme.extension<AppMotionThemeExtension>() ??
         const AppMotionThemeExtension.regular();
+
+    _popUpNewNotifications(context, ref);
 
     final isKeyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     final canHandleBack = _canHandleBack(ref);
@@ -71,6 +75,84 @@ class AppShellScreen extends ConsumerWidget {
               ),
       ),
     );
+  }
+
+  /// A notification that arrives while the app is open (e.g. a payment
+  /// reminder from the manager) drops down from the top. Ones that were
+  /// already there when the app opened show on Home instead.
+  void _popUpNewNotifications(BuildContext context, WidgetRef ref) {
+    ref.listen(tenantNotificationsProvider, (previous, next) {
+      final before = previous?.value;
+      final after = next.value;
+      if (before == null || after == null) return;
+      final seen = {for (final n in before) n.id};
+      final fresh = after.where((n) => n.isUnread && !seen.contains(n.id));
+      if (fresh.isEmpty) return;
+      final n = fresh.first;
+      final messenger = ScaffoldMessenger.of(context);
+      final banner = MaterialBanner(
+        key: ValueKey('notification_banner_${n.id}'),
+        backgroundColor: AppColors.forestGreen,
+        leading: const Icon(
+          Icons.notifications_active_outlined,
+          color: AppColors.limeAccent,
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              n.title,
+              style: AppTypography.sans(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.pureWhite,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              n.body,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.sans(
+                fontSize: 13,
+                color: AppColors.onDarkMuted,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: messenger.hideCurrentMaterialBanner,
+            child: Text(
+              'Close',
+              style: AppTypography.sans(color: AppColors.onDarkMuted),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              messenger.hideCurrentMaterialBanner();
+              ref.read(navigationProvider.notifier).selectTab(AppTab.home);
+            },
+            child: Text(
+              'View',
+              style: AppTypography.sans(
+                fontWeight: FontWeight.w600,
+                color: AppColors.limeAccent,
+              ),
+            ),
+          ),
+        ],
+      );
+      messenger
+        ..hideCurrentMaterialBanner()
+        ..showMaterialBanner(banner);
+      // It stays on Home until dismissed; the drop-down itself goes away.
+      Future.delayed(const Duration(seconds: 8), () {
+        if (context.mounted) messenger.hideCurrentMaterialBanner();
+      });
+    });
   }
 
   bool _canHandleBack(WidgetRef ref) {

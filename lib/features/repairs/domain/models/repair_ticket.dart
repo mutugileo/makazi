@@ -47,6 +47,40 @@ enum RepairPriority {
       values.firstWhere((p) => p.wire == value);
 }
 
+/// Who staff sent to fix it, as the tenant sees it inside the request.
+@immutable
+class RepairVisit {
+  const RepairVisit({required this.name, this.phone, this.whenLabel});
+
+  final String name;
+
+  /// +2547XXXXXXXX, for calling.
+  final String? phone;
+
+  /// "Thu 9 Oct, 2:00 pm", or null when no time was given.
+  final String? whenLabel;
+
+  /// "0712 345 678".
+  String? get phoneLabel {
+    final p = phone;
+    if (p == null) return null;
+    final digits = p.replaceAll(RegExp(r'\D'), '');
+    if (digits.length != 12) return p;
+    final local = '0${digits.substring(3)}';
+    return '${local.substring(0, 4)} ${local.substring(4, 7)} ${local.substring(7)}';
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is RepairVisit &&
+      other.name == name &&
+      other.phone == phone &&
+      other.whenLabel == whenLabel;
+
+  @override
+  int get hashCode => Object.hash(name, phone, whenLabel);
+}
+
 @immutable
 class RepairTicket {
   const RepairTicket({
@@ -57,6 +91,7 @@ class RepairTicket {
     required this.status,
     this.priority = RepairPriority.medium,
     this.hasPhoto = false,
+    this.visit,
   });
 
   final String id;
@@ -67,6 +102,9 @@ class RepairTicket {
   final RepairPriority priority;
   final bool hasPhoto;
 
+  /// Set while the repair is in progress and staff have said who's going.
+  final RepairVisit? visit;
+
   RepairTicket copyWith({
     String? id,
     RepairCategory? category,
@@ -75,6 +113,7 @@ class RepairTicket {
     RepairStatus? status,
     RepairPriority? priority,
     bool? hasPhoto,
+    RepairVisit? Function()? visit,
   }) {
     return RepairTicket(
       id: id ?? this.id,
@@ -84,6 +123,7 @@ class RepairTicket {
       status: status ?? this.status,
       priority: priority ?? this.priority,
       hasPhoto: hasPhoto ?? this.hasPhoto,
+      visit: visit != null ? visit() : this.visit,
     );
   }
 
@@ -97,10 +137,19 @@ class RepairTicket {
         other.subtitle == subtitle &&
         other.status == status &&
         other.priority == priority &&
-        other.hasPhoto == hasPhoto;
+        other.hasPhoto == hasPhoto &&
+        other.visit == visit;
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, category, title, subtitle, status, priority, hasPhoto);
+  int get hashCode => Object.hash(
+    id,
+    category,
+    title,
+    subtitle,
+    status,
+    priority,
+    hasPhoto,
+    visit,
+  );
 }

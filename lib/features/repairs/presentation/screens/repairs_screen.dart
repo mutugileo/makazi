@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_motion.dart';
@@ -244,6 +246,124 @@ class _RepairTicketCard extends StatelessWidget {
               ],
             ],
           ),
+          if (ticket.visit != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _VisitPanel(visit: ticket.visit!),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Who's coming to fix it, their number and when, as staff entered them.
+class _VisitPanel extends StatelessWidget {
+  const _VisitPanel({required this.visit});
+
+  final RepairVisit visit;
+
+  Future<void> _call(BuildContext context) async {
+    final phone = visit.phone;
+    if (phone == null) return;
+    var opened = false;
+    try {
+      opened = await launchUrl(Uri(scheme: 'tel', path: phone));
+    } catch (_) {}
+    if (opened || !context.mounted) return;
+    // No phone app (tablet, simulator): hand over the number instead.
+    await Clipboard.setData(ClipboardData(text: visit.phoneLabel ?? phone));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Number copied')));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final phoneLabel = visit.phoneLabel;
+    return Container(
+      key: const ValueKey('repair_visit_panel'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: AppColors.pageBackground,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: const BoxDecoration(
+              color: AppColors.mintBackground,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.handyman_outlined,
+              size: 18,
+              color: AppColors.mintAccent,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  visit.name,
+                  style: AppTypography.sans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (phoneLabel != null)
+                  Text(
+                    phoneLabel,
+                    style: AppTypography.sans(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                Text(
+                  visit.whenLabel == null
+                      ? 'Visit time to be confirmed'
+                      : 'Visit ${visit.whenLabel}',
+                  style: AppTypography.sans(
+                    fontSize: 13,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (visit.phone != null) ...[
+            const SizedBox(width: AppSpacing.xs),
+            Semantics(
+              button: true,
+              label: 'Call ${visit.name}',
+              child: Material(
+                color: AppColors.mintAccent,
+                shape: const CircleBorder(),
+                child: InkWell(
+                  key: const ValueKey('repair_visit_call'),
+                  customBorder: const CircleBorder(),
+                  onTap: () => _call(context),
+                  child: const SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: Icon(
+                      Icons.call_rounded,
+                      size: 18,
+                      color: AppColors.pureWhite,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

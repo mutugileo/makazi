@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// Same pairing as the admin (PropAdmin/src/styles/global.css): Newsreader for
-// editorial headings and amounts, Nunito Sans for everything else.
+// Same family as the admin (PropAdmin/src/styles/global.css): Baloo 2 for
+// everything. editorialSerif keeps its name so headings and amounts stay one
+// call away from a different face if the brand changes again.
 abstract final class AppTypography {
   static TextTheme createTextTheme(Color defaultTextColor) {
     final baseTextTheme = Typography.material2021().black;
-    return GoogleFonts.nunitoSansTextTheme(
+    return GoogleFonts.baloo2TextTheme(
       baseTextTheme,
     ).apply(bodyColor: defaultTextColor, displayColor: defaultTextColor);
   }
@@ -18,7 +19,7 @@ abstract final class AppTypography {
     double? letterSpacing,
     double? height,
   }) {
-    return GoogleFonts.newsreader(
+    return GoogleFonts.baloo2(
       fontSize: fontSize,
       fontWeight: fontWeight ?? FontWeight.normal,
       color: color,
@@ -35,7 +36,7 @@ abstract final class AppTypography {
     double? height,
     bool tabularFigures = false,
   }) {
-    return GoogleFonts.nunitoSans(
+    return GoogleFonts.baloo2(
       fontSize: fontSize,
       fontWeight: fontWeight ?? FontWeight.normal,
       color: color,

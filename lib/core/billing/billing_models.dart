@@ -65,6 +65,7 @@ class CompanySettings {
     required this.graceDay,
     required this.depositSchedule,
     required this.recordRetentionMonths,
+    this.mpesaSimulation = false,
   });
 
   factory CompanySettings.fromJson(Map<String, dynamic> json) =>
@@ -76,6 +77,7 @@ class CompanySettings {
           (bedrooms, amount) => MapEntry(int.parse(bedrooms), amount as int),
         ),
         recordRetentionMonths: json['recordRetentionMonths'] as int,
+        mpesaSimulation: json['mpesaSimulation'] == true,
       );
 
   /// First month on Makazi ('YYYY-MM').
@@ -86,6 +88,11 @@ class CompanySettings {
   final int graceDay;
   final Map<int, int> depositSchedule;
   final int recordRetentionMonths;
+
+  /// M-Pesa test mode: "Pay now" runs a simulated STK push that the
+  /// database records as a flagged test payment. Off unless the owner turns
+  /// it on in Settings; real STK push needs Daraja.
+  final bool mpesaSimulation;
 }
 
 /// Makazi subscription. Stored and shown; not enforced or billed yet.
@@ -407,6 +414,7 @@ class Payment {
     required this.time,
     required this.method,
     required this.reference,
+    this.simulated = false,
   });
 
   factory Payment.fromJson(Map<String, dynamic> json) => Payment(
@@ -417,6 +425,7 @@ class Payment {
     time: json['time'] as String,
     method: PaymentMethod.fromJson(json['method'] as String),
     reference: json['reference'] as String,
+    simulated: json['simulated'] == true,
   );
 
   final String receiptNumber;
@@ -426,6 +435,9 @@ class Payment {
   final String time;
   final PaymentMethod method;
   final String reference;
+
+  /// A test payment from M-Pesa test mode: no money moved.
+  final bool simulated;
 }
 
 /// The facts the engine needs. For the tenant app this is one tenancy's
@@ -555,6 +567,8 @@ class RepairTicketRecord {
     required this.resolvedAt,
     required this.assignedTo,
     required this.resolutionNote,
+    this.assignedPhone,
+    this.visitAt,
   });
 
   factory RepairTicketRecord.fromJson(Map<String, dynamic> json) =>
@@ -573,6 +587,8 @@ class RepairTicketRecord {
         resolvedAt: json['resolvedAt'] as String?,
         assignedTo: json['assignedTo'] as String?,
         resolutionNote: json['resolutionNote'] as String?,
+        assignedPhone: json['assignedPhone'] as String?,
+        visitAt: json['visitAt'] as String?,
       );
 
   final String id;
@@ -591,6 +607,12 @@ class RepairTicketRecord {
   final String? resolvedAt;
   final String? assignedTo;
   final String? resolutionNote;
+
+  /// Mobile of whoever is fixing it (+2547XXXXXXXX), set by staff.
+  final String? assignedPhone;
+
+  /// When they're expected: ISO date-time with Nairobi offset.
+  final String? visitAt;
 
   /// Numeric part of 'MT-1047'.
   int get number => int.parse(id.split('-').last);
