@@ -96,7 +96,10 @@ class _FakeRepository extends SupabaseBillingRepository {
   }
 
   @override
-  Future<BillingSeed> fetchTenantSeed() {
+  Future<BillingSeed> fetchTenantSeed({
+    bool fullHistory = false,
+    int recentMonths = 12,
+  }) {
     final completer = Completer<BillingSeed>();
     fetches.add(completer);
     return completer.future;

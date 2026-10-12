@@ -14,8 +14,10 @@ Map<String, dynamic> _readJson(String path) =>
     jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
 
 void main() {
-  final seed = BillingSeed.fromJson(_readJson('shared/billing-seed.json'));
-  final expected = _readJson('shared/billing-expected.json');
+  final seed = BillingSeed.fromJson(
+    _readJson('test/fixtures/billing-fixture.json'),
+  );
+  final expected = _readJson('test/fixtures/billing-fixture-expected.json');
   final engine = BillingEngine(seed);
 
   test('every tenancy in the fixture is covered', () {

@@ -86,6 +86,36 @@ class TenantAccountState {
 
   String get unitTitle => '${property.name} · ${unit.label}';
 
+  /// Effective M-Pesa Paybill: prefers apartment override if present,
+  /// falling back to the company default.
+  String get effectiveMpesaPaybill {
+    final propPaybill = property.mpesaPaybill;
+    if (propPaybill != null && propPaybill.trim().isNotEmpty) {
+      return propPaybill.trim();
+    }
+    return company.mpesaPaybill;
+  }
+
+  /// Effective Bank Name: prefers apartment override if present,
+  /// falling back to the company default.
+  String get effectiveBankName {
+    final propBank = property.bankName;
+    if (propBank != null && propBank.trim().isNotEmpty) {
+      return propBank.trim();
+    }
+    return company.bankName;
+  }
+
+  /// Effective Bank Account: prefers apartment override if present,
+  /// falling back to the company default.
+  String get effectiveBankAccount {
+    final propAccount = property.bankAccount;
+    if (propAccount != null && propAccount.trim().isNotEmpty) {
+      return propAccount.trim();
+    }
+    return company.bankAccount;
+  }
+
   /// Everything paid since the landlord joined Makazi (ledgerStartMonth).
   int get totalPaid => seed.payments.fold(0, (sum, p) => sum + p.amount);
 

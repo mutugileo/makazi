@@ -5,6 +5,7 @@ import 'package:prop_mgt_app/features/auth/data/auth_repository.dart';
 import 'package:prop_mgt_app/features/auth/data/demo_credentials.dart';
 import 'package:prop_mgt_app/features/auth/presentation/state/auth_providers.dart';
 import 'package:prop_mgt_app/features/billing/presentation/state/tenant_account_providers.dart';
+import 'package:prop_mgt_app/features/billing/presentation/state/tenant_account_state.dart';
 
 void main() {
   group('TenantAccountNotifier', () {
@@ -115,12 +116,56 @@ void main() {
       expect(account.tenant.name, 'Naliaka Wekesa');
       expect(account.company.name, 'Savanna Homes Ltd');
       expect(account.company.mpesaPaybill, '400200');
+      expect(account.effectiveMpesaPaybill, '400200');
+      expect(account.effectiveBankName, account.company.bankName);
+      expect(account.effectiveBankAccount, account.company.bankAccount);
       expect(account.accountNumber, 'MC-3');
       expect(account.manager?.name, 'Wanjiru Maina');
       expect(account.currentBill!.dueDate, '2026-10-01');
       expect(account.receipts.first.companyName, 'Savanna Homes Ltd');
       expect(account.seed.companies.map((c) => c.id), ['savanna']);
     });
+
+    test(
+      'apartment-level payment overrides take precedence over company defaults',
+      () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final base = container.read(tenantAccountProvider).seed;
+        final overrideProp = Property(
+          id: base.properties.first.id,
+          companyId: base.properties.first.companyId,
+          managerId: base.properties.first.managerId,
+          name: base.properties.first.name,
+          type: base.properties.first.type,
+          address: base.properties.first.address,
+          accountPrefix: base.properties.first.accountPrefix,
+          waterRate: base.properties.first.waterRate,
+          garbageFee: base.properties.first.garbageFee,
+          rateHistory: base.properties.first.rateHistory,
+          mpesaPaybill: '999888',
+          bankName: 'KCB Bank, Upper Hill',
+          bankAccount: '1234567890',
+        );
+        final overriddenSeed = BillingSeed(
+          asOf: base.asOf,
+          companies: base.companies,
+          properties: [overrideProp],
+          units: base.units,
+          tenants: base.tenants,
+          tenancies: base.tenancies,
+          meterReadings: base.meterReadings,
+          payments: base.payments,
+          staff: base.staff,
+          repairTickets: base.repairTickets,
+          messages: base.messages,
+        );
+        final account = TenantAccountState.fromSeed(overriddenSeed);
+        expect(account.effectiveMpesaPaybill, '999888');
+        expect(account.effectiveBankName, 'KCB Bank, Upper Hill');
+        expect(account.effectiveBankAccount, '1234567890');
+      },
+    );
   });
 
   group('former tenant', () {

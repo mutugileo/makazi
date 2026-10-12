@@ -34,14 +34,27 @@ class SupabaseBillingRepository {
   /// The tenant's [BillingSeed]: one company, property, unit and tenancy.
   /// Throws [NoTenancyFound] when there is nothing to show, and the
   /// underlying error when the database can't be reached.
-  Future<BillingSeed> fetchTenantSeed() async {
-    return _fetchTenantSeedInternal().timeout(
+  ///
+  /// For mature tenancies older than 12 months, payments are paginated to the
+  /// last [recentMonths] (default 12) by default to prevent large payloads.
+  /// Pass [fullHistory] = true to fetch the entire historical ledger.
+  Future<BillingSeed> fetchTenantSeed({
+    bool fullHistory = false,
+    int recentMonths = 12,
+  }) async {
+    return _fetchTenantSeedInternal(
+      fullHistory: fullHistory,
+      recentMonths: recentMonths,
+    ).timeout(
       const Duration(seconds: 10),
       onTimeout: () => throw TimeoutException('Connection timed out'),
     );
   }
 
-  Future<BillingSeed> _fetchTenantSeedInternal() async {
+  Future<BillingSeed> _fetchTenantSeedInternal({
+    bool fullHistory = false,
+    int recentMonths = 12,
+  }) async {
     final sb = _sb;
     final userId = sb.auth.currentUser?.id;
     if (userId == null) throw const NoTenancyFound();
@@ -89,6 +102,31 @@ class SupabaseBillingRepository {
       (t) => t['id'] == tenancyRow['tenant_id'] && t['company_id'] == companyId,
     );
 
+    // Optimize ledger query for mature tenancies (> 12 months)
+    final moveInDateStr = tenancyRow['move_in'] as String;
+    final now = DateTime.now();
+    final moveInDate = DateTime.tryParse(moveInDateStr) ?? now;
+    final isMatureTenancy = now.difference(moveInDate).inDays > 365;
+
+    final cutoffDate = (fullHistory || !isMatureTenancy)
+        ? null
+        : DateTime(
+            now.year,
+            now.month - recentMonths,
+            1,
+          ).toIso8601String().substring(0, 10);
+
+    var paymentsFilter = sb
+        .from('payments')
+        .select()
+        .eq('company_id', companyId)
+        .eq('tenancy_id', tenancyId);
+
+    if (cutoffDate != null) {
+      paymentsFilter = paymentsFilter.gte('date', cutoffDate);
+    }
+    final paymentsFuture = paymentsFilter.order('date', ascending: false);
+
     // Fetch company, unit (with embedded property & staff), payments, meter readings,
     // repair tickets, and messages concurrently.
     final results = await Future.wait<dynamic>([
@@ -99,11 +137,7 @@ class SupabaseBillingRepository {
           .eq('company_id', companyId)
           .eq('id', unitId)
           .single(),
-      sb
-          .from('payments')
-          .select()
-          .eq('company_id', companyId)
-          .eq('tenancy_id', tenancyId),
+      paymentsFuture,
       sb
           .from('meter_readings')
           .select()
@@ -368,6 +402,9 @@ class SupabaseBillingRepository {
       for (final r in (row['rate_history'] as List<dynamic>?) ?? const [])
         PropertyRates.fromJson(r as Map<String, dynamic>),
     ],
+    mpesaPaybill: row['mpesa_paybill'] as String?,
+    bankName: row['bank_name'] as String?,
+    bankAccount: row['bank_account'] as String?,
   );
 
   static Tenancy _tenancy(Map<String, dynamic> row) => Tenancy(
@@ -382,6 +419,7 @@ class SupabaseBillingRepository {
     leaseEnd: row['lease_end'] as String,
     openingBalance: (row['opening_balance'] as num).toInt(),
     openingReading: (row['opening_reading'] as num?)?.toInt(),
+    moveInGarbage: (row['move_in_garbage'] as num?)?.toInt(),
     renewal: row['renewal'] != null
         ? TenancyRenewal.fromJson(row['renewal'] as Map<String, dynamic>)
         : null,
@@ -432,6 +470,30 @@ class SupabaseBillingRepository {
         body: row['body'] as String,
         sentAt: nairobiIso(row['sent_at'] as String),
       );
+
+  /// Paginated payments query for viewing historical statements beyond the default window.
+  Future<List<Payment>> fetchPaginatedPayments({
+    required String companyId,
+    required String tenancyId,
+    int page = 0,
+    int pageSize = 20,
+  }) async {
+    final sb = _sb;
+    final from = page * pageSize;
+    final to = from + pageSize - 1;
+
+    final rows = _rows(
+      await sb
+          .from('payments')
+          .select()
+          .eq('company_id', companyId)
+          .eq('tenancy_id', tenancyId)
+          .order('date', ascending: false)
+          .range(from, to),
+    );
+
+    return rows.map((r) => _payment(r)).toList();
+  }
 }
 
 /// The two realtime channels a signed-in tenant listens on.

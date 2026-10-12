@@ -263,9 +263,9 @@ class _PayRentFormView extends ConsumerWidget {
             _PaymentMethodCard(
               title: 'M-Pesa',
               subtitle: !canPush
-                  ? 'Paybill ${company.mpesaPaybill} · '
+                  ? 'Paybill ${account.effectiveMpesaPaybill} · '
                         'Account ${account.accountNumber}'
-                  : 'STK push to your phone · Paybill ${company.mpesaPaybill} · '
+                  : 'STK push to your phone · Paybill ${account.effectiveMpesaPaybill} · '
                         'Account ${account.accountNumber}',
               isSelected: state.paymentMethod == PayRentMethod.mpesa,
               onTap: () => notifier.selectPaymentMethod(PayRentMethod.mpesa),
@@ -273,7 +273,8 @@ class _PayRentFormView extends ConsumerWidget {
             const SizedBox(height: AppSpacing.md),
             _PaymentMethodCard(
               title: 'Bank transfer',
-              subtitle: '${company.bankName} · reflects in 1 working day',
+              subtitle:
+                  '${account.effectiveBankName} · reflects in 1 working day',
               isSelected: state.paymentMethod == PayRentMethod.bankTransfer,
               onTap: () =>
                   notifier.selectPaymentMethod(PayRentMethod.bankTransfer),
@@ -291,7 +292,10 @@ class _PayRentFormView extends ConsumerWidget {
                 ),
                 child: Column(
                   children: [
-                    _BankRow(label: 'Paybill', value: company.mpesaPaybill),
+                    _BankRow(
+                      label: 'Paybill',
+                      value: account.effectiveMpesaPaybill,
+                    ),
                     const SizedBox(height: AppSpacing.sm),
                     _BankRow(label: 'Account', value: account.accountNumber),
                     const SizedBox(height: AppSpacing.sm),
@@ -311,7 +315,7 @@ class _PayRentFormView extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
               _MpesaPayNowButton(
-                paybill: company.mpesaPaybill,
+                paybill: account.effectiveMpesaPaybill,
                 accountNumber: account.accountNumber,
                 amount: state.amountFormatted,
                 companyName: company.name,
@@ -422,11 +426,11 @@ class _PayRentFormView extends ConsumerWidget {
                 ),
                 child: Column(
                   children: [
-                    _BankRow(label: 'Bank', value: company.bankName),
+                    _BankRow(label: 'Bank', value: account.effectiveBankName),
                     const SizedBox(height: AppSpacing.sm),
                     _BankRow(
                       label: 'Account',
-                      value: _spacedAccount(company.bankAccount),
+                      value: _spacedAccount(account.effectiveBankAccount),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     _BankRow(label: 'Reference', value: account.accountNumber),
@@ -437,8 +441,8 @@ class _PayRentFormView extends ConsumerWidget {
               _CopyDetailsButton(
                 label: 'Copy bank details',
                 text:
-                    'Bank: ${company.bankName}\n'
-                    'Account: ${company.bankAccount}\n'
+                    'Bank: ${account.effectiveBankName}\n'
+                    'Account: ${account.effectiveBankAccount}\n'
                     'Reference: ${account.accountNumber}',
                 confirmation: 'Bank details copied to clipboard',
               ),
@@ -1071,7 +1075,7 @@ class _MpesaPromptView extends ConsumerWidget {
                         Text(
                           'Pay ${state.amountFormatted} to '
                           '${company.name.toUpperCase()}, Paybill '
-                          '${company.mpesaPaybill}, account '
+                          '${account.effectiveMpesaPaybill}, account '
                           '${account.accountNumber}?',
                           style: AppTypography.sans(
                             fontSize: 16,

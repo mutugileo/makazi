@@ -221,10 +221,13 @@ class BillingEngine {
           rentDays = rent.days;
           lines
             ..add(BillLine(kind: BillLineKind.deposit, amount: tenancy.deposit))
-            ..add(BillLine(kind: BillLineKind.rent, amount: rent.amount))
-            ..add(
-              BillLine(kind: BillLineKind.garbage, amount: rates.garbageFee),
+            ..add(BillLine(kind: BillLineKind.rent, amount: rent.amount));
+          final moveInGarbage = tenancy.moveInGarbage ?? rates.garbageFee;
+          if (moveInGarbage > 0) {
+            lines.add(
+              BillLine(kind: BillLineKind.garbage, amount: moveInGarbage),
             );
+          }
           final currentReading = _reading(unit.id, month);
           if (currentReading != null &&
               tenancy.openingReading != null &&

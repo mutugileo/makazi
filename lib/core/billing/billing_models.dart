@@ -224,6 +224,9 @@ class Property {
     required this.waterRate,
     required this.garbageFee,
     required this.rateHistory,
+    this.mpesaPaybill,
+    this.bankName,
+    this.bankAccount,
   });
 
   factory Property.fromJson(Map<String, dynamic> json) => Property(
@@ -239,6 +242,9 @@ class Property {
     rateHistory: ((json['rateHistory'] as List<dynamic>?) ?? const [])
         .map((e) => PropertyRates.fromJson(e as Map<String, dynamic>))
         .toList(growable: false),
+    mpesaPaybill: json['mpesaPaybill'] as String?,
+    bankName: json['bankName'] as String?,
+    bankAccount: json['bankAccount'] as String?,
   );
 
   final String id;
@@ -257,6 +263,15 @@ class Property {
 
   /// Every rate change, oldest first.
   final List<PropertyRates> rateHistory;
+
+  /// Optional dedicated M-Pesa Paybill for this property. If null/empty, uses company default.
+  final String? mpesaPaybill;
+
+  /// Optional dedicated bank name for this property. If null/empty, uses company default.
+  final String? bankName;
+
+  /// Optional dedicated bank account for this property. If null/empty, uses company default.
+  final String? bankAccount;
 
   /// Rates in force for a bill month; before the first change, the earliest.
   PropertyRates ratesFor(String month) {
@@ -367,6 +382,7 @@ class Tenancy {
     required this.openingBalance,
     required this.openingReading,
     required this.renewal,
+    this.moveInGarbage,
   });
 
   factory Tenancy.fromJson(Map<String, dynamic> json) => Tenancy(
@@ -381,6 +397,7 @@ class Tenancy {
     leaseEnd: json['leaseEnd'] as String,
     openingBalance: json['openingBalance'] as int,
     openingReading: json['openingReading'] as int?,
+    moveInGarbage: (json['moveInGarbage'] as num?)?.toInt(),
     renewal: json['renewal'] == null
         ? null
         : TenancyRenewal.fromJson(json['renewal'] as Map<String, dynamic>),
@@ -399,6 +416,9 @@ class Tenancy {
 
   /// Water meter at move-in; null for tenancies older than the ledger.
   final int? openingReading;
+
+  /// Garbage fee override for move-in month; null falls back to property rate.
+  final int? moveInGarbage;
   final TenancyRenewal? renewal;
 
   bool get isActive => moveOut == null;
