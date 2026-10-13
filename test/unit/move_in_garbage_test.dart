@@ -49,17 +49,17 @@ void main() {
       },
     );
 
-    test('when moveInGarbage is null, falls back to property garbage fee', () {
+    test('when moveInGarbage is null, defaults to 0 (no fallback)', () {
       final seed = _seedWithMoveInGarbage(moveInGarbage: null);
-      final property = seed.properties.first;
       final bills = BillingEngine(seed).ledger(seed.tenancies.single);
       final moveInBill = bills.firstWhere((b) => b.kind == BillKind.moveIn);
 
-      expect(moveInBill.garbage, property.garbageFee);
+      expect(moveInBill.garbage, 0);
       expect(
-        moveInBill.totalDue,
-        moveInBill.deposit + moveInBill.rent + property.garbageFee,
+        moveInBill.lines.any((l) => l.kind == BillLineKind.garbage),
+        isFalse,
       );
+      expect(moveInBill.totalDue, moveInBill.deposit + moveInBill.rent);
     });
   });
 }

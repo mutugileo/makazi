@@ -222,7 +222,7 @@ class BillingEngine {
           lines
             ..add(BillLine(kind: BillLineKind.deposit, amount: tenancy.deposit))
             ..add(BillLine(kind: BillLineKind.rent, amount: rent.amount));
-          final moveInGarbage = tenancy.moveInGarbage ?? rates.garbageFee;
+          final moveInGarbage = tenancy.moveInGarbage ?? 0;
           if (moveInGarbage > 0) {
             lines.add(
               BillLine(kind: BillLineKind.garbage, amount: moveInGarbage),

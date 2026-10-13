@@ -732,7 +732,8 @@
       "deposit": 25000,
       "moveIn": "2026-09-16",
       "leaseStart": "2026-09-16",
-      "leaseEnd": "2027-09-15"
+      "leaseEnd": "2027-09-15",
+      "moveInGarbage": 250
     },
     {
       "openingBalance": 0,
@@ -796,7 +797,8 @@
       "deposit": 15000,
       "moveIn": "2026-08-12",
       "leaseStart": "2026-08-12",
-      "leaseEnd": "2027-08-11"
+      "leaseEnd": "2027-08-11",
+      "moveInGarbage": 200
     },
     {
       "openingBalance": 0,
