@@ -17,6 +17,7 @@ import '../../../payments/presentation/state/payments_ui_state.dart';
 import '../state/home_pay_rent_providers.dart';
 import '../widgets/account_sheet.dart';
 import '../widgets/action_needed_card.dart';
+import '../widgets/ask_nyumbani_promo_card.dart';
 import '../widgets/current_bill_card.dart';
 import '../widgets/hero_balance_card.dart';
 import '../widgets/pay_rent_flow_view.dart';
@@ -237,6 +238,8 @@ class _HomeDashboardView extends StatelessWidget {
               onSeeAllPressed: onSeeAllPressed,
               onTransactionTapped: onTransactionTapped,
             ),
+            const SizedBox(height: AppSpacing.lg),
+            const AskNyumbaniPromoCard(),
           ],
         ),
       ),
