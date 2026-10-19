@@ -156,6 +156,36 @@ class BillDetailView extends StatelessWidget {
                 ],
               ),
             ),
+          ] else if (bill.kind == BillKind.monthly) ...[
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.cardBackground,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.borderLight),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.water_drop_outlined,
+                    size: 20,
+                    color: AppColors.statusPartialText,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      'Pending water bill · Monthly meter reading will be added once recorded by management',
+                      style: AppTypography.sans(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
           const SizedBox(height: AppSpacing.xl),
           Text(

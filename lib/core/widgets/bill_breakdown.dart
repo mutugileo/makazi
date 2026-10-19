@@ -18,9 +18,13 @@ class BillBreakdown extends StatelessWidget {
       BillingDates.addMonths(bill.month, -1),
     ).split(' ').first;
 
+    final hasWaterLine = bill.lines.any((l) => l.kind == BillLineKind.water);
+    final isWaterPending =
+        bill.kind == BillKind.monthly && bill.water == null && !hasWaterLine;
+
     return Column(
       children: [
-        for (final line in bill.lines)
+        for (final line in bill.lines) ...[
           _Row(
             label: _lineLabel(line),
             detail: line.kind == BillLineKind.water && bill.water != null
@@ -29,6 +33,22 @@ class BillBreakdown extends StatelessWidget {
                 ? '${bill.rentDays!.days} of ${bill.rentDays!.of} days'
                 : null,
             value: formatKes(line.amount),
+          ),
+          if (line.kind == BillLineKind.rent && isWaterPending)
+            const _Row(
+              label: 'Water',
+              detail: 'Reading pending from management',
+              value: 'Pending water bill',
+              valueColor: AppColors.statusPartialText,
+            ),
+        ],
+        if (!bill.lines.any((l) => l.kind == BillLineKind.rent) &&
+            isWaterPending)
+          const _Row(
+            label: 'Water',
+            detail: 'Reading pending from management',
+            value: 'Pending water bill',
+            valueColor: AppColors.statusPartialText,
           ),
         if (bill.balanceBf != 0)
           _Row(
