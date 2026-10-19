@@ -58,7 +58,7 @@ class AuthNotifier extends Notifier<AuthState> {
     if (normalized == null) {
       state = state.copyWith(
         errorText: () =>
-            'Enter your Safaricom or Airtel number, e.g. 0712 345 678',
+            'Enter a valid 10-digit mobile number starting with 07 or 01',
       );
       return;
     }
@@ -346,5 +346,4 @@ class AuthNotifier extends Notifier<AuthState> {
       errorText: message,
     );
   }
-
 }
