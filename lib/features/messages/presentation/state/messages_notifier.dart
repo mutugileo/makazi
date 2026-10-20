@@ -21,6 +21,7 @@ ChatMessage chatMessageFromRecord(MessageRecord record, String today) {
     text: record.body,
     isUserMessage: record.sender == 'tenant',
     timestamp: chatTimestamp(record.sentAt, today),
+    readByStaffAt: record.readByStaffAt,
   );
 }
 
@@ -138,5 +139,13 @@ class MessagesNotifier extends Notifier<List<ChatMessage>> {
       }
       _publish();
     }
+  }
+
+  void sendTyping(bool isTyping) {
+    ref.read(tenantRealtimeProvider)?.sendTyping(isTyping);
+  }
+
+  void markConversationRead() {
+    ref.read(tenantRealtimeProvider)?.sendReadReceipt();
   }
 }

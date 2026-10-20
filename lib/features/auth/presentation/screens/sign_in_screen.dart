@@ -60,13 +60,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     // Only the prototype's demo sign-in shows this; the Supabase repository
     // in Phase 2 never does.
     final isDemo =
-        kDemoDataAvailable && ref.watch(authRepositoryProvider) is DemoAuthRepository;
+        kDemoDataAvailable &&
+        ref.watch(authRepositoryProvider) is DemoAuthRepository;
 
     return AuthScaffold(
       title: 'Sign in',
       subtitle:
           'Use the phone number your property manager has for you and the '
-          'password they gave you.',
+          '4-digit PIN they gave you.',
       child: AutofillGroup(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -91,11 +92,17 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               key: const ValueKey('sign_in_password'),
               controller: _password,
               obscureText: _obscure,
+              keyboardType: TextInputType.number,
               autofillHints: const [AutofillHints.password],
               textInputAction: TextInputAction.done,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(4),
+              ],
               onSubmitted: (_) => _submit(),
               decoration: authInputDecoration(
-                label: 'Password',
+                label: '4-digit PIN',
+                hint: '4 digits',
                 suffix: IconButton(
                   onPressed: () => setState(() => _obscure = !_obscure),
                   icon: Icon(
@@ -104,7 +111,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         : Icons.visibility_off_outlined,
                     color: AppColors.textMuted,
                   ),
-                  tooltip: _obscure ? 'Show password' : 'Hide password',
+                  tooltip: _obscure ? 'Show PIN' : 'Hide PIN',
                 ),
               ),
             ),
@@ -117,8 +124,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             ),
             const SizedBox(height: AppSpacing.lg),
             Text(
-              'Forgot your password? Ask your property manager for a new '
-              'one-time password. They can reset it for you.',
+              'Forgot your PIN? Ask your property manager for a new '
+              '4-digit PIN. They can reset it for you.',
               style: AppTypography.sans(
                 fontSize: 13,
                 color: AppColors.textMuted,

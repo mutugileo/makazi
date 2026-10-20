@@ -22,7 +22,7 @@ class DemoAccount {
 /// Naliaka Wekesa (Savanna Homes Ltd, 3 Milimani Court), plus
 /// Joseph Kariuki, a former HarborRidge tenant (moved out of 2A, read-only).
 const List<DemoAccount> kDemoAccounts = [
-  DemoAccount(phone: '0733 605 118', password: 'Karibu-5A', isTemporary: true),
-  DemoAccount(phone: '0723 555 019', password: 'Karibu-MC3', isTemporary: true),
-  DemoAccount(phone: '0720 671 093', password: 'Karibu-2A', isTemporary: true),
+  DemoAccount(phone: '0733 605 118', password: '5821', isTemporary: true),
+  DemoAccount(phone: '0723 555 019', password: '3690', isTemporary: false),
+  DemoAccount(phone: '0720 671 093', password: '1470', isTemporary: false),
 ];

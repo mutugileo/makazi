@@ -63,7 +63,7 @@ class AuthNotifier extends Notifier<AuthState> {
       return;
     }
     if (password.isEmpty) {
-      state = state.copyWith(errorText: () => 'Enter your password');
+      state = state.copyWith(errorText: () => 'Enter your 4-digit PIN');
       return;
     }
 
@@ -74,15 +74,38 @@ class AuthNotifier extends Notifier<AuthState> {
     );
     if (!ref.mounted) return;
 
+    if (outcome == SignInOutcome.success) {
+      if (password.trim().length == 4) {
+        final pin = password.trim();
+        _pin = pin;
+        final userId = _repository.currentUserId ?? 'user-$normalized';
+        final lock = DeviceLock.create(
+          userId: userId,
+          phone: normalized,
+          pin: pin,
+          firstName: state.firstName,
+        );
+        _cachedLock = lock;
+        _lockStore.write(lock);
+        await _checkBiometricsAfterPin(
+          phone: normalized,
+          firstName: state.firstName,
+        );
+        return;
+      }
+      state = AuthState(stage: AuthStage.createPin, phone: normalized);
+      return;
+    }
+
     state = switch (outcome) {
       SignInOutcome.invalidCredentials => state.copyWith(
         isBusy: false,
-        errorText: () => 'That phone number and password don\'t match',
+        errorText: () => 'That phone number and PIN don\'t match',
       ),
       SignInOutcome.oneTimePasswordExpired => state.copyWith(
         isBusy: false,
         errorText: () =>
-            'That one-time password has expired. Ask your property manager for a new one.',
+            'That PIN has expired. Ask your property manager for a new one.',
       ),
       SignInOutcome.networkError => state.copyWith(
         isBusy: false,
@@ -93,10 +116,7 @@ class AuthNotifier extends Notifier<AuthState> {
         stage: AuthStage.mustChangePassword,
         phone: normalized,
       ),
-      SignInOutcome.success => AuthState(
-        stage: AuthStage.createPin,
-        phone: normalized,
-      ),
+      SignInOutcome.success => state,
     };
   }
 
@@ -181,6 +201,45 @@ class AuthNotifier extends Notifier<AuthState> {
     }
 
     _checkBiometricsAfterPin(phone: phone, firstName: firstName);
+  }
+
+  /// Allows an authenticated tenant to change their 4-digit PIN on the app.
+  /// Returns null on success, or a human-friendly error string.
+  Future<String?> changePin({
+    required String currentPin,
+    required String newPin,
+    required String confirmation,
+  }) async {
+    final lock = _cachedLock ?? await _lockStore.read();
+    if (lock != null && !lock.matches(currentPin)) {
+      return 'Current PIN is incorrect';
+    }
+
+    final problem = pinProblem(newPin);
+    if (problem != null) return problem;
+
+    if (newPin != confirmation) {
+      return 'The new PINs don\'t match';
+    }
+
+    try {
+      await _repository.changePassword(newPassword: newPin);
+    } catch (_) {
+      return 'Could not update PIN on server. Check your connection.';
+    }
+
+    _pin = newPin;
+    final phone = state.phone ?? lock?.phone ?? '';
+    final userId = _repository.currentUserId ?? lock?.userId ?? 'user-$phone';
+    final updatedLock = DeviceLock.create(
+      userId: userId,
+      phone: phone,
+      pin: newPin,
+      firstName: state.firstName ?? lock?.firstName,
+    ).copyWith(biometricsEnabled: lock?.biometricsEnabled ?? false);
+    _cachedLock = updatedLock;
+    await _lockStore.write(updatedLock);
+    return null;
   }
 
   Future<void> _checkBiometricsAfterPin({

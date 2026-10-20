@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../notifications/presentation/widgets/notification_cards.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/billing/billing_engine.dart';
 import '../../../../core/config/features.dart';
@@ -12,6 +11,9 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../billing/presentation/state/tenant_account_providers.dart';
 import '../../../billing/presentation/state/tenant_account_state.dart';
 import '../../../navigation/presentation/state/navigation_providers.dart';
+import '../../../notifications/presentation/screens/notifications_screen.dart';
+import '../../../notifications/presentation/state/notifications_providers.dart';
+import '../../../notifications/presentation/widgets/notification_cards.dart';
 import '../../../payments/presentation/state/payments_providers.dart';
 import '../../../payments/presentation/state/payments_ui_state.dart';
 import '../state/home_pay_rent_providers.dart';
@@ -32,6 +34,7 @@ class HomeScreen extends ConsumerWidget {
     final payRentState = ref.watch(homePayRentProvider);
     final payRentNotifier = ref.read(homePayRentProvider.notifier);
     final account = ref.watch(tenantAccountProvider);
+    final unreadCount = ref.watch(unreadNotificationsProvider).length;
     final paymentsNotifier = ref.read(paymentsProvider.notifier);
     final theme = Theme.of(context);
     final motion =
@@ -63,6 +66,7 @@ class HomeScreen extends ConsumerWidget {
               : _HomeDashboardView(
                   key: const ValueKey('home_dashboard_view'),
                   account: account,
+                  unreadCount: unreadCount,
                   onRefresh: () async {
                     await ref
                         .read(tenantAccountProvider.notifier)
@@ -98,6 +102,7 @@ class _HomeDashboardView extends StatelessWidget {
   const _HomeDashboardView({
     super.key,
     required this.account,
+    required this.unreadCount,
     required this.onRefresh,
     required this.onPayRentPressed,
     required this.onSeeAllPressed,
@@ -107,6 +112,7 @@ class _HomeDashboardView extends StatelessWidget {
   });
 
   final TenantAccountState account;
+  final int unreadCount;
   final Future<void> Function() onRefresh;
   final VoidCallback onPayRentPressed;
   final VoidCallback onSeeAllPressed;
@@ -169,36 +175,87 @@ class _HomeDashboardView extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
-                Semantics(
-                  button: true,
-                  label: 'Account',
-                  child: GestureDetector(
-                    key: const ValueKey('account_avatar'),
-                    onTap: () => showModalBottomSheet<void>(
-                      context: context,
-                      backgroundColor: AppColors.cardBackground,
-                      showDragHandle: true,
-                      builder: (_) => AccountSheet(account: account),
-                    ),
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: const BoxDecoration(
-                        color: AppColors.avatarBackground,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          account.tenant.initials,
-                          style: AppTypography.sans(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.avatarText,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Semantics(
+                      button: true,
+                      label: 'Notifications',
+                      child: GestureDetector(
+                        key: const ValueKey('home_notifications_bell'),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const NotificationsScreen(),
+                          ),
+                        ),
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: AppColors.cardBackground,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppColors.borderLight),
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              const Icon(
+                                Icons.notifications_none_rounded,
+                                color: AppColors.textPrimary,
+                                size: 22,
+                              ),
+                              if (unreadCount > 0)
+                                Positioned(
+                                  top: 10,
+                                  right: 10,
+                                  child: Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.forestGreen,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Semantics(
+                      button: true,
+                      label: 'Account',
+                      child: GestureDetector(
+                        key: const ValueKey('account_avatar'),
+                        onTap: () => showModalBottomSheet<void>(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: AppColors.cardBackground,
+                          showDragHandle: true,
+                          builder: (_) => AccountSheet(account: account),
+                        ),
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: const BoxDecoration(
+                            color: AppColors.avatarBackground,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              account.tenant.initials,
+                              style: AppTypography.sans(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.avatarText,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

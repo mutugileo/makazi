@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -20,9 +21,45 @@ class MessagesScreen extends ConsumerStatefulWidget {
 
 class _MessagesScreenState extends ConsumerState<MessagesScreen> {
   final _textController = TextEditingController();
+  Timer? _typingTimer;
+  bool _isCurrentlyTyping = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _textController.addListener(_onTextChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(messagesProvider.notifier).markConversationRead();
+      }
+    });
+  }
+
+  void _onTextChanged() {
+    final hasText = _textController.text.trim().isNotEmpty;
+    if (hasText) {
+      if (!_isCurrentlyTyping) {
+        _isCurrentlyTyping = true;
+        ref.read(messagesProvider.notifier).sendTyping(true);
+      }
+      _typingTimer?.cancel();
+      _typingTimer = Timer(const Duration(milliseconds: 2500), () {
+        if (mounted && _isCurrentlyTyping) {
+          _isCurrentlyTyping = false;
+          ref.read(messagesProvider.notifier).sendTyping(false);
+        }
+      });
+    } else if (_isCurrentlyTyping) {
+      _isCurrentlyTyping = false;
+      _typingTimer?.cancel();
+      ref.read(messagesProvider.notifier).sendTyping(false);
+    }
+  }
 
   @override
   void dispose() {
+    _typingTimer?.cancel();
+    _textController.removeListener(_onTextChanged);
     _textController.dispose();
     super.dispose();
   }
@@ -31,6 +68,11 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
     final text = _textController.text;
     if (text.trim().isEmpty) {
       return;
+    }
+    _typingTimer?.cancel();
+    if (_isCurrentlyTyping) {
+      _isCurrentlyTyping = false;
+      ref.read(messagesProvider.notifier).sendTyping(false);
     }
     ref.read(messagesProvider.notifier).dispatchUserMessage(text);
     _textController.clear();
@@ -272,19 +314,45 @@ class _ChatMessageItem extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             switch (message.delivery) {
-              MessageDelivery.sent => Text(
-                message.timestamp,
-                style: AppTypography.sans(
-                  fontSize: 11,
-                  color: AppColors.textMuted,
-                ),
+              MessageDelivery.sent => Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    message.timestamp,
+                    style: AppTypography.sans(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.done_all_rounded,
+                    size: 15,
+                    color: message.isReadByStaff
+                        ? const Color(0xFF2E7D32)
+                        : AppColors.textMuted,
+                  ),
+                ],
               ),
-              MessageDelivery.sending => Text(
-                'Sending…',
-                style: AppTypography.sans(
-                  fontSize: 11,
-                  color: AppColors.textMuted,
-                ),
+              MessageDelivery.sending => Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    'Sending…',
+                    style: AppTypography.sans(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.done_rounded,
+                    size: 14,
+                    color: AppColors.textMuted,
+                  ),
+                ],
               ),
               MessageDelivery.failed => GestureDetector(
                 onTap: onRetry,

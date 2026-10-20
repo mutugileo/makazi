@@ -74,14 +74,11 @@ void main() {
     );
     await tester.enterText(
       find.byKey(const ValueKey('sign_in_password')),
-      'not-it',
+      '9999',
     );
     await tester.tap(find.widgetWithText(ElevatedButton, 'Sign in'));
     await tester.pumpAndSettle();
-    expect(
-      find.text("That phone number and password don't match"),
-      findsOneWidget,
-    );
+    expect(find.text("That phone number and PIN don't match"), findsOneWidget);
 
     await tester.enterText(
       find.byKey(const ValueKey('sign_in_password')),
@@ -200,4 +197,44 @@ void main() {
       expect(find.text('Habari, David'), findsOneWidget);
     },
   );
+
+  testWidgets('direct 4-digit PIN sign-in unlocks directly to home', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390 * 2, 844 * 2);
+    tester.view.devicePixelRatio = 2.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(
+            DemoAuthRepository(latency: Duration.zero),
+          ),
+        ],
+        child: const PropMgtApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final directAccount =
+        kDemoAccounts[1]; // 0723 555 019, 3690, isTemporary: false
+
+    await tester.enterText(
+      find.byKey(const ValueKey('sign_in_phone')),
+      directAccount.phone,
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('sign_in_password')),
+      directAccount.password,
+    );
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Sign in'));
+    await tester.pumpAndSettle();
+
+    // Home is reached directly without password change or PIN setup screens!
+    expect(find.text('Choose a password'), findsNothing);
+    expect(find.text('Create a PIN'), findsNothing);
+    expect(find.text('Habari, Naliaka'), findsOneWidget);
+  });
 }

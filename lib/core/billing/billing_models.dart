@@ -648,6 +648,7 @@ class MessageRecord {
     required this.staffId,
     required this.body,
     required this.sentAt,
+    this.readByStaffAt,
   });
 
   factory MessageRecord.fromJson(Map<String, dynamic> json) => MessageRecord(
@@ -658,6 +659,7 @@ class MessageRecord {
     staffId: json['staffId'] as String?,
     body: json['body'] as String,
     sentAt: json['sentAt'] as String,
+    readByStaffAt: json['readByStaffAt'] as String?,
   );
 
   final String id;
@@ -671,6 +673,8 @@ class MessageRecord {
 
   /// ISO date-time with Nairobi offset.
   final String sentAt;
+
+  final String? readByStaffAt;
 }
 
 @immutable

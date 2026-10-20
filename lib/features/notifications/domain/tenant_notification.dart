@@ -24,7 +24,42 @@ class TenantNotification {
   final String? readAt;
 
   bool get isUnread => readAt == null;
-  bool get isPaymentReminder => kind == 'payment_reminder';
+  bool get isPinReset =>
+      kind == 'pin_reset' ||
+      title.toLowerCase().contains('pin') ||
+      body.toLowerCase().contains('pin');
+  bool get isPaymentReminder => kind == 'payment_reminder' && !isPinReset;
+
+  DateTime? get createdDateTime => DateTime.tryParse(createdAt);
+
+  DateTime? get pinExpiresAt {
+    if (!isPinReset) return null;
+    final created = createdDateTime;
+    return created?.add(const Duration(hours: 72));
+  }
+
+  bool get isPinExpired {
+    final exp = pinExpiresAt;
+    if (exp == null) return false;
+    return DateTime.now().isAfter(exp);
+  }
+
+  String? get pinValidityLabel {
+    if (!isPinReset) return null;
+    final exp = pinExpiresAt;
+    if (exp == null) return 'Valid for 72 hours';
+    final remaining = exp.difference(DateTime.now());
+    if (remaining.isNegative) return 'Expired';
+    if (remaining.inHours < 1) {
+      return 'Expires in ${remaining.inMinutes}m';
+    }
+    if (remaining.inHours < 24) {
+      return 'Expires in ${remaining.inHours}h';
+    }
+    final days = remaining.inDays;
+    final hours = remaining.inHours % 24;
+    return hours > 0 ? 'Expires in ${days}d ${hours}h' : 'Expires in ${days}d';
+  }
 
   @override
   bool operator ==(Object other) =>

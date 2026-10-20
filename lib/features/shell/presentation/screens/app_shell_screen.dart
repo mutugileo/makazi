@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_motion.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../notifications/presentation/state/notifications_providers.dart';
 import '../../../billing/presentation/state/tenant_account_providers.dart';
 import '../../../home/domain/models/pay_rent_models.dart';
@@ -133,7 +134,9 @@ class AppShellScreen extends ConsumerWidget {
           TextButton(
             onPressed: () {
               messenger.hideCurrentMaterialBanner();
-              ref.read(navigationProvider.notifier).selectTab(AppTab.home);
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+              );
             },
             child: Text(
               'View',

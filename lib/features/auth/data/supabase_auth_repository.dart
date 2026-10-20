@@ -27,10 +27,11 @@ class SupabaseAuthRepository implements AuthRepository {
     final email =
         '${normalized.replaceAll(RegExp(r'\D'), '')}@tenant.makazi.app';
 
-    // One-time passwords are shown as ABCD-EFGH-JKLM; accept them typed in
-    // lower case or without the dashes.
+    // 4-digit PINs are mapped to makazi-pin-XXXX for Supabase GoTrue compatibility.
+    // One-time passwords are also accepted in upper/lower case without dashes.
     final typed = password.trim();
     final candidates = <String>{
+      if (typed.length == 4) 'makazi-pin-$typed',
       typed,
       typed.toUpperCase(),
       typed.replaceAll('-', '').toUpperCase(),
@@ -57,17 +58,26 @@ class SupabaseAuthRepository implements AuthRepository {
       }
       if (user == null) return SignInOutcome.invalidCredentials;
 
-      final status = await _accountStatus();
-      if (status.expired) {
-        await _sb.auth.signOut();
-        return SignInOutcome.oneTimePasswordExpired;
+      // Check 72-hour validity for manager-generated PINs
+      final metadata = user.userMetadata ?? {};
+      final pinExpiresAtStr = metadata['pin_expires_at'] as String?;
+      if (pinExpiresAtStr != null) {
+        final pinExpiresAt = DateTime.tryParse(pinExpiresAtStr);
+        if (pinExpiresAt != null && pinExpiresAt.isBefore(DateTime.now())) {
+          await _sb.auth.signOut();
+          return SignInOutcome.oneTimePasswordExpired;
+        }
       }
-      final isTemporary =
-          status.mustChangePassword ||
-          user.userMetadata?['is_temporary'] == true;
-      return isTemporary
-          ? SignInOutcome.mustChangePassword
-          : SignInOutcome.success;
+
+      // Clear any legacy pending password gate so the tenant has immediate access
+      try {
+        final status = await _accountStatus();
+        if (status.mustChangePassword) {
+          await _sb.rpc('complete_password_change');
+        }
+      } catch (_) {}
+
+      return SignInOutcome.success;
     } catch (_) {
       // Signed in but couldn't read the account status: don't half-enter.
       try {
@@ -88,12 +98,17 @@ class SupabaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> changePassword({required String newPassword}) async {
+    final trimmed = newPassword.trim();
+    final effective = trimmed.length == 4 ? 'makazi-pin-$trimmed' : trimmed;
     await _sb.auth.updateUser(
-      UserAttributes(password: newPassword, data: {'is_temporary': false}),
+      UserAttributes(
+        password: effective,
+        data: {'is_temporary': false, 'pin_expires_at': null},
+      ),
     );
-    await _sb.rpc('complete_password_change');
-    final status = await _accountStatus();
-    if (status.mustChangePassword) throw const OneTimePasswordExpired();
+    try {
+      await _sb.rpc('complete_password_change');
+    } catch (_) {}
   }
 
   @override

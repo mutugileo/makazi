@@ -35,6 +35,27 @@ class TenantNotificationsNotifier
         .fetchNotifications(companyId: ids.company, tenancyId: ids.tenancy);
   }
 
+  ({String company, String tenancy})? _ids() {
+    final seed = ref.read(liveTenantSeedProvider).value;
+    return seed == null
+        ? null
+        : (
+            company: seed.companies.single.id,
+            tenancy: seed.tenancies.single.id,
+          );
+  }
+
+  /// Refreshes the notifications list from the database.
+  Future<void> refresh() async {
+    if (!ref.read(liveDataProvider)) return;
+    final ids = _ids();
+    if (ids == null) return;
+    final fresh = await ref
+        .read(supabaseBillingRepositoryProvider)
+        .fetchNotifications(companyId: ids.company, tenancyId: ids.tenancy);
+    state = AsyncData(fresh);
+  }
+
   /// Hides it once the database has recorded it as read. Throws if that
   /// failed, so the card stays and the screen can say so.
   Future<void> dismiss(String id) async {
@@ -51,6 +72,35 @@ class TenantNotificationsNotifier
                 body: n.body,
                 createdAt: n.createdAt,
                 readAt: DateTime.now().toIso8601String(),
+              )
+            : n,
+    ]);
+  }
+
+  /// Marks all unread notifications read for this tenancy.
+  Future<void> markAllRead() async {
+    if (!ref.read(liveDataProvider)) return;
+    final ids = _ids();
+    if (ids == null) return;
+    await ref
+        .read(supabaseBillingRepositoryProvider)
+        .markAllNotificationsRead(
+          companyId: ids.company,
+          tenancyId: ids.tenancy,
+        );
+    final current = state.value;
+    if (current == null) return;
+    final now = DateTime.now().toIso8601String();
+    state = AsyncData([
+      for (final n in current)
+        n.isUnread
+            ? TenantNotification(
+                id: n.id,
+                kind: n.kind,
+                title: n.title,
+                body: n.body,
+                createdAt: n.createdAt,
+                readAt: now,
               )
             : n,
     ]);

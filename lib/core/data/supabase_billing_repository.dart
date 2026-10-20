@@ -316,6 +316,19 @@ class SupabaseBillingRepository {
         .single();
   }
 
+  /// Marks all unread notifications read for this tenancy.
+  Future<void> markAllNotificationsRead({
+    required String companyId,
+    required String tenancyId,
+  }) async {
+    await _sb
+        .from('notifications')
+        .update({'read_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('company_id', companyId)
+        .eq('tenancy_id', tenancyId)
+        .filter('read_at', 'is', null);
+  }
+
   static TenantNotification notificationFromRow(Map<String, dynamic> row) =>
       TenantNotification(
         id: row['id'] as String,
@@ -357,10 +370,14 @@ class SupabaseBillingRepository {
         .onBroadcast(event: 'message_sent', callback: (_) => onChanged())
         .onBroadcast(
           event: 'typing',
-          callback: (payload) => onTyping(payload['isTyping'] == true),
+          callback: (payload) {
+            if (payload['sender'] != 'tenant') {
+              onTyping(payload['isTyping'] == true);
+            }
+          },
         )
         .subscribe();
-    return TenantRealtime._(sb, [company, tenancy]);
+    return TenantRealtime._(sb, [company, tenancy], tenancy);
   }
 
   static List<Map<String, dynamic>> _rows(Object? result) => [
@@ -469,6 +486,9 @@ class SupabaseBillingRepository {
         staffId: row['staff_id'] as String?,
         body: row['body'] as String,
         sentAt: nairobiIso(row['sent_at'] as String),
+        readByStaffAt: row['read_by_staff_at'] == null
+            ? null
+            : nairobiIso(row['read_by_staff_at'] as String),
       );
 
   /// Paginated payments query for viewing historical statements beyond the default window.
@@ -498,10 +518,32 @@ class SupabaseBillingRepository {
 
 /// The two realtime channels a signed-in tenant listens on.
 class TenantRealtime {
-  TenantRealtime._(this._sb, this._channels);
+  TenantRealtime._(this._sb, this._channels, this._tenancyChannel);
 
   final SupabaseClient _sb;
   final List<RealtimeChannel> _channels;
+  final RealtimeChannel _tenancyChannel;
+
+  Future<void> sendTyping(bool isTyping) async {
+    try {
+      await _tenancyChannel.sendBroadcastMessage(
+        event: 'typing',
+        payload: {'isTyping': isTyping, 'sender': 'tenant'},
+      );
+    } catch (_) {}
+  }
+
+  Future<void> sendReadReceipt() async {
+    try {
+      await _tenancyChannel.sendBroadcastMessage(
+        event: 'tenant_read',
+        payload: {
+          'readAt': DateTime.now().toUtc().toIso8601String(),
+          'sender': 'tenant',
+        },
+      );
+    } catch (_) {}
+  }
 
   Future<void> dispose() async {
     for (final channel in _channels) {

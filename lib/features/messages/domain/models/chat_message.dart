@@ -11,6 +11,7 @@ class ChatMessage {
     required this.isUserMessage,
     required this.timestamp,
     this.delivery = MessageDelivery.sent,
+    this.readByStaffAt,
   });
 
   final String id;
@@ -18,16 +19,21 @@ class ChatMessage {
   final bool isUserMessage;
   final String timestamp;
   final MessageDelivery delivery;
+  final String? readByStaffAt;
+
+  bool get isReadByStaff => readByStaffAt != null;
 
   ChatMessage copyWith({
     String? id,
     String? timestamp,
     MessageDelivery? delivery,
+    String? readByStaffAt,
   }) => ChatMessage(
     id: id ?? this.id,
     text: text,
     isUserMessage: isUserMessage,
     timestamp: timestamp ?? this.timestamp,
     delivery: delivery ?? this.delivery,
+    readByStaffAt: readByStaffAt ?? this.readByStaffAt,
   );
 }

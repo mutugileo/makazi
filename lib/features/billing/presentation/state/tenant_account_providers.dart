@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/billing/billing_models.dart';
 import '../../../../core/data/data_mode.dart';
 import '../../../../core/data/supabase_billing_providers.dart';
+import '../../../../core/data/supabase_billing_repository.dart';
 import '../../../auth/domain/auth_models.dart';
 import '../../../auth/presentation/state/auth_providers.dart';
 import '../../../messages/presentation/state/messages_notifier.dart';
@@ -39,7 +40,7 @@ final liveTenantSeedProvider = FutureProvider<BillingSeed?>((ref) {
 
 /// Live mode: refetches when the admin changes something for this tenant,
 /// and shows the manager typing. Kept alive by the screen that shows data.
-final tenantRealtimeProvider = Provider<void>((ref) {
+final tenantRealtimeProvider = Provider<TenantRealtime?>((ref) {
   final ids = ref.watch(
     liveTenantSeedProvider.select((async) {
       final seed = async.value;
@@ -51,7 +52,7 @@ final tenantRealtimeProvider = Provider<void>((ref) {
             );
     }),
   );
-  if (ids == null) return;
+  if (ids == null) return null;
   final realtime = ref
       .read(supabaseBillingRepositoryProvider)
       .subscribe(
@@ -67,4 +68,5 @@ final tenantRealtimeProvider = Provider<void>((ref) {
         },
       );
   ref.onDispose(realtime.dispose);
+  return realtime;
 });

@@ -96,6 +96,17 @@ class _FakeRepository extends SupabaseBillingRepository {
   }
 
   @override
+  Future<void> markAllNotificationsRead({
+    required String companyId,
+    required String tenancyId,
+  }) async {
+    if (failWrites) throw Exception('offline');
+    for (final n in notifications) {
+      if (n.isUnread) markedRead.add(n.id);
+    }
+  }
+
+  @override
   Future<BillingSeed> fetchTenantSeed({
     bool fullHistory = false,
     int recentMonths = 12,
@@ -172,7 +183,7 @@ Future<_FakeRepository> _pumpLiveApp(WidgetTester tester) async {
       overrides: [
         liveDataProvider.overrideWithValue(true),
         supabaseBillingRepositoryProvider.overrideWithValue(repo),
-        tenantRealtimeProvider.overrideWith((ref) {}),
+        tenantRealtimeProvider.overrideWith((ref) => null),
         authProvider.overrideWith(_SignedIn.new),
       ],
       child: const PropMgtApp(),
