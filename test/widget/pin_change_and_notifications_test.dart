@@ -69,7 +69,7 @@ class _MockAuthNotifier extends AuthNotifier {
 
   @override
   Future<String?> changePin({
-    required String currentPin,
+    String? currentPin,
     required String newPin,
     required String confirmation,
   }) async {
@@ -143,6 +143,49 @@ void main() {
     expect(mockAuth.lastNewPin, '5678');
     expect(mockAuth.lastConfirmation, '5678');
   });
+
+  testWidgets(
+    'ChangePinSheet in temporary prompt mode sets permanent PIN without current PIN',
+    (tester) async {
+      tester.view.physicalSize = const Size(390 * 2, 844 * 2);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final mockAuth = _MockAuthNotifier();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [authProvider.overrideWith(() => mockAuth)],
+          child: const MaterialApp(
+            home: Scaffold(body: ChangePinSheet(isTemporaryPrompt: true)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Create personal PIN'), findsOneWidget);
+      expect(find.byKey(const ValueKey('change_pin_current')), findsNothing);
+      expect(find.byKey(const ValueKey('change_pin_new')), findsOneWidget);
+      expect(find.byKey(const ValueKey('change_pin_confirm')), findsOneWidget);
+      expect(find.text('Save permanent PIN'), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(const ValueKey('change_pin_new')),
+        '2468',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('change_pin_confirm')),
+        '2468',
+      );
+      await tester.tap(find.byKey(const ValueKey('change_pin_submit_button')));
+      await tester.pump();
+
+      expect(mockAuth.lastCurrentPin, isNull);
+      expect(mockAuth.lastNewPin, '2468');
+      expect(mockAuth.lastConfirmation, '2468');
+    },
+  );
 
   testWidgets(
     'NotificationsScreen displays PIN reset notification with 72h validity and Change PIN action',

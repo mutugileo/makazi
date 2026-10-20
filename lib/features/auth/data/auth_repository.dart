@@ -19,6 +19,9 @@ abstract interface class AuthRepository {
   /// PIN on this phone to one account.
   String? get currentUserId;
 
+  /// Whether the currently signed-in user has a manager-generated temporary PIN.
+  bool get isCurrentUserTemporary;
+
   /// Fires when the server ends the session (e.g. the manager reset the
   /// password), so the app goes back to password sign-in.
   Stream<void> get sessionEnded;
@@ -76,6 +79,13 @@ class DemoAuthRepository implements AuthRepository {
 
   @override
   String? get currentUserId => _signedInPhone;
+
+  @override
+  bool get isCurrentUserTemporary {
+    final phone = _signedInPhone;
+    if (phone == null) return false;
+    return _accounts[phone]?.mustChangePassword ?? false;
+  }
 
   @override
   Stream<void> get sessionEnded => const Stream.empty();

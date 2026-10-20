@@ -46,6 +46,7 @@ class AuthNotifier extends Notifier<AuthState> {
             ? restored.biometricLabel
             : null,
         failedPinAttempts: restored.failedAttempts,
+        isTemporaryPin: restored.isTemporary,
       );
     }
 
@@ -75,6 +76,7 @@ class AuthNotifier extends Notifier<AuthState> {
     if (!ref.mounted) return;
 
     if (outcome == SignInOutcome.success) {
+      final isTemporary = _repository.isCurrentUserTemporary;
       if (password.trim().length == 4) {
         final pin = password.trim();
         _pin = pin;
@@ -84,16 +86,22 @@ class AuthNotifier extends Notifier<AuthState> {
           phone: normalized,
           pin: pin,
           firstName: state.firstName,
+          isTemporary: isTemporary,
         );
         _cachedLock = lock;
         _lockStore.write(lock);
         await _checkBiometricsAfterPin(
           phone: normalized,
           firstName: state.firstName,
+          isTemporary: isTemporary,
         );
         return;
       }
-      state = AuthState(stage: AuthStage.createPin, phone: normalized);
+      state = AuthState(
+        stage: AuthStage.createPin,
+        phone: normalized,
+        isTemporaryPin: isTemporary,
+      );
       return;
     }
 
@@ -204,15 +212,18 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   /// Allows an authenticated tenant to change their 4-digit PIN on the app.
+  /// If [currentPin] is provided, verifies that it matches the stored lock.
   /// Returns null on success, or a human-friendly error string.
   Future<String?> changePin({
-    required String currentPin,
+    String? currentPin,
     required String newPin,
     required String confirmation,
   }) async {
     final lock = _cachedLock ?? await _lockStore.read();
-    if (lock != null && !lock.matches(currentPin)) {
-      return 'Current PIN is incorrect';
+    if (currentPin != null && currentPin.isNotEmpty) {
+      if (lock != null && !lock.matches(currentPin)) {
+        return 'Current PIN is incorrect';
+      }
     }
 
     final problem = pinProblem(newPin);
@@ -236,15 +247,18 @@ class AuthNotifier extends Notifier<AuthState> {
       phone: phone,
       pin: newPin,
       firstName: state.firstName ?? lock?.firstName,
+      isTemporary: false,
     ).copyWith(biometricsEnabled: lock?.biometricsEnabled ?? false);
     _cachedLock = updatedLock;
     await _lockStore.write(updatedLock);
+    state = state.copyWith(isTemporaryPin: false);
     return null;
   }
 
   Future<void> _checkBiometricsAfterPin({
     required String phone,
     String? firstName,
+    bool isTemporary = false,
   }) async {
     final bioLabel = await _biometrics.availableLabel();
     if (!ref.mounted) return;
@@ -255,12 +269,14 @@ class AuthNotifier extends Notifier<AuthState> {
         firstName: firstName,
         biometricLabel: () => bioLabel,
         errorText: () => null,
+        isTemporaryPin: isTemporary,
       );
     } else {
       state = AuthState(
         stage: AuthStage.unlocked,
         phone: phone,
         firstName: firstName,
+        isTemporaryPin: isTemporary,
       );
     }
   }
@@ -277,6 +293,7 @@ class AuthNotifier extends Notifier<AuthState> {
       stage: AuthStage.unlocked,
       phone: state.phone,
       firstName: state.firstName,
+      isTemporaryPin: state.isTemporaryPin,
     );
   }
 
@@ -288,6 +305,7 @@ class AuthNotifier extends Notifier<AuthState> {
       stage: AuthStage.unlocked,
       phone: state.phone,
       firstName: state.firstName,
+      isTemporaryPin: state.isTemporaryPin,
     );
   }
 
@@ -323,6 +341,7 @@ class AuthNotifier extends Notifier<AuthState> {
         stage: AuthStage.unlocked,
         phone: state.phone ?? lock?.phone,
         firstName: state.firstName ?? lock?.firstName,
+        isTemporaryPin: lock?.isTemporary ?? state.isTemporaryPin,
       );
       return;
     }
@@ -363,6 +382,7 @@ class AuthNotifier extends Notifier<AuthState> {
         stage: AuthStage.unlocked,
         phone: state.phone ?? _cachedLock?.phone,
         firstName: state.firstName ?? _cachedLock?.firstName,
+        isTemporaryPin: _cachedLock?.isTemporary ?? state.isTemporaryPin,
       );
     }
   }
@@ -375,6 +395,7 @@ class AuthNotifier extends Notifier<AuthState> {
       phone: state.phone,
       firstName: state.firstName,
       biometricLabel: state.biometricLabel,
+      isTemporaryPin: state.isTemporaryPin,
     );
   }
 

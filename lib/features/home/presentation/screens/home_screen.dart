@@ -24,6 +24,8 @@ import '../widgets/current_bill_card.dart';
 import '../widgets/hero_balance_card.dart';
 import '../widgets/pay_rent_flow_view.dart';
 import '../widgets/recent_transactions_card.dart';
+import '../../../auth/presentation/state/auth_providers.dart';
+import '../../../auth/presentation/widgets/change_pin_sheet.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -67,6 +69,7 @@ class HomeScreen extends ConsumerWidget {
                   key: const ValueKey('home_dashboard_view'),
                   account: account,
                   unreadCount: unreadCount,
+                  isTemporaryPin: ref.watch(authProvider).isTemporaryPin,
                   onRefresh: () async {
                     await ref
                         .read(tenantAccountProvider.notifier)
@@ -103,6 +106,7 @@ class _HomeDashboardView extends StatelessWidget {
     super.key,
     required this.account,
     required this.unreadCount,
+    required this.isTemporaryPin,
     required this.onRefresh,
     required this.onPayRentPressed,
     required this.onSeeAllPressed,
@@ -113,6 +117,7 @@ class _HomeDashboardView extends StatelessWidget {
 
   final TenantAccountState account;
   final int unreadCount;
+  final bool isTemporaryPin;
   final Future<void> Function() onRefresh;
   final VoidCallback onPayRentPressed;
   final VoidCallback onSeeAllPressed;
@@ -261,6 +266,91 @@ class _HomeDashboardView extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             const NotificationCards(),
+            if (isTemporaryPin) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.terracottaLight,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppColors.terracotta.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.terracotta.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.lock_clock_outlined,
+                        color: AppColors.terracotta,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Temporary PIN · 72h window',
+                            style: AppTypography.sans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.terracotta,
+                            ),
+                          ),
+                          const SizedBox(height: 1),
+                          Text(
+                            'Choose your personal 4-digit PIN to secure your account.',
+                            style: AppTypography.sans(
+                              fontSize: 11,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    ElevatedButton(
+                      key: const ValueKey('home_set_permanent_pin_button'),
+                      onPressed: () =>
+                          ChangePinSheet.show(context, isTemporaryPrompt: true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.forestGreen,
+                        foregroundColor: AppColors.pureWhite,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        'Set PIN',
+                        style: AppTypography.sans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.pureWhite,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             HeroBalanceCard(
               bill: account.currentBill,
               isActive: account.isActive,

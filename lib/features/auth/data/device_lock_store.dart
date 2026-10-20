@@ -21,6 +21,7 @@ class DeviceLock {
     this.firstName,
     this.biometricsEnabled = false,
     this.failedAttempts = 0,
+    this.isTemporary = false,
   });
 
   /// Creates the record for a newly chosen PIN.
@@ -29,6 +30,7 @@ class DeviceLock {
     required String phone,
     required String pin,
     String? firstName,
+    bool isTemporary = false,
   }) {
     final random = Random.secure();
     final salt = base64Url.encode(
@@ -40,6 +42,7 @@ class DeviceLock {
       salt: salt,
       pinHash: hashPin(pin, salt: salt, userId: userId),
       firstName: firstName,
+      isTemporary: isTemporary,
     );
   }
 
@@ -51,6 +54,7 @@ class DeviceLock {
     firstName: json['firstName'] as String?,
     biometricsEnabled: json['biometricsEnabled'] == true,
     failedAttempts: (json['failedAttempts'] as num?)?.toInt() ?? 0,
+    isTemporary: json['isTemporary'] == true,
   );
 
   final String userId;
@@ -62,6 +66,7 @@ class DeviceLock {
   final String? firstName;
   final bool biometricsEnabled;
   final int failedAttempts;
+  final bool isTemporary;
 
   bool matches(String pin) =>
       _constantTimeEquals(hashPin(pin, salt: salt, userId: userId), pinHash);
@@ -70,6 +75,7 @@ class DeviceLock {
     String? firstName,
     bool? biometricsEnabled,
     int? failedAttempts,
+    bool? isTemporary,
   }) => DeviceLock(
     userId: userId,
     phone: phone,
@@ -78,6 +84,7 @@ class DeviceLock {
     firstName: firstName ?? this.firstName,
     biometricsEnabled: biometricsEnabled ?? this.biometricsEnabled,
     failedAttempts: failedAttempts ?? this.failedAttempts,
+    isTemporary: isTemporary ?? this.isTemporary,
   );
 
   Map<String, dynamic> toJson() => {
@@ -88,6 +95,7 @@ class DeviceLock {
     'firstName': firstName,
     'biometricsEnabled': biometricsEnabled,
     'failedAttempts': failedAttempts,
+    'isTemporary': isTemporary,
   };
 
   /// Salted and stretched so the stored value doesn't give the PIN away at a

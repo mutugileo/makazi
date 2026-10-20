@@ -8,16 +8,22 @@ import '../../domain/auth_models.dart';
 import '../state/auth_providers.dart';
 import 'auth_scaffold.dart';
 
-/// Bottom sheet allowing the tenant to change their 4-digit PIN.
+/// Bottom sheet allowing the tenant to change their 4-digit PIN or set
+/// a permanent PIN after signing in with a manager-issued temporary PIN.
 class ChangePinSheet extends ConsumerStatefulWidget {
-  const ChangePinSheet({super.key});
+  const ChangePinSheet({super.key, this.isTemporaryPrompt = false});
 
-  static Future<void> show(BuildContext context) {
+  final bool isTemporaryPrompt;
+
+  static Future<void> show(
+    BuildContext context, {
+    bool isTemporaryPrompt = false,
+  }) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const ChangePinSheet(),
+      builder: (_) => ChangePinSheet(isTemporaryPrompt: isTemporaryPrompt),
     );
   }
 
@@ -50,7 +56,7 @@ class _ChangePinSheetState extends ConsumerState<ChangePinSheet> {
     final next = _newPin.text.trim();
     final confirm = _confirmPin.text.trim();
 
-    if (current.length != kPinLength) {
+    if (!widget.isTemporaryPrompt && current.length != kPinLength) {
       setState(() => _errorText = 'Enter your current 4-digit PIN');
       return;
     }
@@ -70,7 +76,11 @@ class _ChangePinSheetState extends ConsumerState<ChangePinSheet> {
 
     final error = await ref
         .read(authProvider.notifier)
-        .changePin(currentPin: current, newPin: next, confirmation: confirm);
+        .changePin(
+          currentPin: widget.isTemporaryPrompt ? null : current,
+          newPin: next,
+          confirmation: confirm,
+        );
 
     if (!mounted) return;
 
@@ -90,7 +100,9 @@ class _ChangePinSheetState extends ConsumerState<ChangePinSheet> {
             const Icon(Icons.check_circle_outline, color: AppColors.limeAccent),
             const SizedBox(width: AppSpacing.sm),
             Text(
-              'PIN updated successfully',
+              widget.isTemporaryPrompt
+                  ? 'Permanent PIN saved'
+                  : 'PIN updated successfully',
               style: AppTypography.sans(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -111,6 +123,7 @@ class _ChangePinSheetState extends ConsumerState<ChangePinSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final isTemp = widget.isTemporaryPrompt;
 
     return Material(
       color: AppColors.pureWhite,
@@ -147,12 +160,16 @@ class _ChangePinSheetState extends ConsumerState<ChangePinSheet> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: AppColors.limeSoft,
+                        color: isTemp
+                            ? AppColors.terracottaLight
+                            : AppColors.limeSoft,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(
-                        Icons.key_outlined,
-                        color: AppColors.forestGreen,
+                      child: Icon(
+                        isTemp ? Icons.lock_clock_outlined : Icons.key_outlined,
+                        color: isTemp
+                            ? AppColors.terracotta
+                            : AppColors.forestGreen,
                         size: 22,
                       ),
                     ),
@@ -162,7 +179,9 @@ class _ChangePinSheetState extends ConsumerState<ChangePinSheet> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Change 4-digit PIN',
+                            isTemp
+                                ? 'Create personal PIN'
+                                : 'Change 4-digit PIN',
                             style: AppTypography.editorialSerif(
                               fontSize: 22,
                               fontWeight: FontWeight.w400,
@@ -170,7 +189,9 @@ class _ChangePinSheetState extends ConsumerState<ChangePinSheet> {
                             ),
                           ),
                           Text(
-                            'Choose a new PIN for this phone',
+                            isTemp
+                                ? 'Your temporary manager PIN is active. Choose your personal PIN.'
+                                : 'Choose a new PIN for this phone',
                             style: AppTypography.sans(
                               fontSize: 13,
                               color: AppColors.textMuted,
@@ -182,32 +203,34 @@ class _ChangePinSheetState extends ConsumerState<ChangePinSheet> {
                   ],
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                TextField(
-                  key: const ValueKey('change_pin_current'),
-                  controller: _currentPin,
-                  obscureText: _obscureCurrent,
-                  keyboardType: TextInputType.number,
-                  textInputAction: TextInputAction.next,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(kPinLength),
-                  ],
-                  decoration: authInputDecoration(
-                    label: 'Current 4-digit PIN',
-                    hint: 'Enter your current PIN',
-                    suffix: IconButton(
-                      onPressed: () =>
-                          setState(() => _obscureCurrent = !_obscureCurrent),
-                      icon: Icon(
-                        _obscureCurrent
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        color: AppColors.textMuted,
+                if (!isTemp) ...[
+                  TextField(
+                    key: const ValueKey('change_pin_current'),
+                    controller: _currentPin,
+                    obscureText: _obscureCurrent,
+                    keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.next,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(kPinLength),
+                    ],
+                    decoration: authInputDecoration(
+                      label: 'Current 4-digit PIN',
+                      hint: 'Enter your current PIN',
+                      suffix: IconButton(
+                        onPressed: () =>
+                            setState(() => _obscureCurrent = !_obscureCurrent),
+                        icon: Icon(
+                          _obscureCurrent
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                          color: AppColors.textMuted,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: AppSpacing.md),
+                ],
                 TextField(
                   key: const ValueKey('change_pin_new'),
                   controller: _newPin,
@@ -219,7 +242,7 @@ class _ChangePinSheetState extends ConsumerState<ChangePinSheet> {
                     LengthLimitingTextInputFormatter(kPinLength),
                   ],
                   decoration: authInputDecoration(
-                    label: 'New 4-digit PIN',
+                    label: isTemp ? 'New personal PIN' : 'New 4-digit PIN',
                     hint: 'Choose 4 digits',
                     suffix: IconButton(
                       onPressed: () =>
@@ -298,7 +321,7 @@ class _ChangePinSheetState extends ConsumerState<ChangePinSheet> {
                             ),
                           )
                         : Text(
-                            'Update PIN',
+                            isTemp ? 'Save permanent PIN' : 'Update PIN',
                             style: AppTypography.sans(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,

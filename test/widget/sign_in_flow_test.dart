@@ -26,6 +26,9 @@ class _RealRepository implements AuthRepository {
   String? get currentUserId => null;
 
   @override
+  bool get isCurrentUserTemporary => false;
+
+  @override
   Stream<void> get sessionEnded => const Stream.empty();
 }
 

@@ -107,6 +107,7 @@ class RestoredDevice {
     this.biometricsEnabled = false,
     this.biometricLabel,
     this.failedAttempts = 0,
+    this.isTemporary = false,
   });
 
   const RestoredDevice.none()
@@ -115,7 +116,8 @@ class RestoredDevice {
       firstName = null,
       biometricsEnabled = false,
       biometricLabel = null,
-      failedAttempts = 0;
+      failedAttempts = 0,
+      isTemporary = false;
 
   final bool hasSession;
   final String? phone;
@@ -123,6 +125,7 @@ class RestoredDevice {
   final bool biometricsEnabled;
   final String? biometricLabel;
   final int failedAttempts;
+  final bool isTemporary;
 
   bool get canUnlockWithPin => hasSession && phone != null;
   bool get canUnlockWithBiometrics =>

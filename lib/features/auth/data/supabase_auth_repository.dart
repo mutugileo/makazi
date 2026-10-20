@@ -117,6 +117,14 @@ class SupabaseAuthRepository implements AuthRepository {
   @override
   String? get currentUserId => _sb.auth.currentUser?.id;
 
+  @override
+  bool get isCurrentUserTemporary {
+    final metadata = _sb.auth.currentUser?.userMetadata;
+    if (metadata == null) return false;
+    return metadata['is_temporary'] == true ||
+        metadata['pin_expires_at'] != null;
+  }
+
   // Supabase reports signedOut when a refresh token is rejected (revoked,
   // password reset, user removed) as well as after our own signOut().
   @override

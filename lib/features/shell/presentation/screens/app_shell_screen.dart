@@ -18,12 +18,49 @@ import '../../../payments/presentation/state/payments_providers.dart';
 import '../../../repairs/presentation/screens/repairs_screen.dart';
 import '../../../repairs/presentation/state/repairs_providers.dart';
 import '../../../../core/platform/platform_channel_service.dart';
+import '../../../auth/presentation/state/auth_providers.dart';
+import '../../../auth/presentation/widgets/change_pin_sheet.dart';
 
-class AppShellScreen extends ConsumerWidget {
+class AppShellScreen extends ConsumerStatefulWidget {
   const AppShellScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AppShellScreen> createState() => _AppShellScreenState();
+}
+
+class _AppShellScreenState extends ConsumerState<AppShellScreen> {
+  bool _hasPromptedTemporaryPin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkTemporaryPinPrompt();
+    });
+  }
+
+  void _checkTemporaryPinPrompt() {
+    if (!mounted || _hasPromptedTemporaryPin) return;
+    final isTemporary = ref.read(authProvider).isTemporaryPin;
+    if (isTemporary) {
+      _hasPromptedTemporaryPin = true;
+      ChangePinSheet.show(context, isTemporaryPrompt: true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(authProvider.select((s) => s.isTemporaryPin), (prev, isTemp) {
+      if (isTemp && !_hasPromptedTemporaryPin) {
+        _hasPromptedTemporaryPin = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ChangePinSheet.show(context, isTemporaryPrompt: true);
+          }
+        });
+      }
+    });
+
     final navState = ref.watch(navigationProvider);
     final theme = Theme.of(context);
     final motion =

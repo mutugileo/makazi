@@ -48,6 +48,8 @@ Future<RestoredDevice> restoreDeviceSession({
             : const NoBiometricUnlock());
     final bioLabel = await bio.availableLabel();
 
+    final isTemporary = lock.isTemporary || auth.isCurrentUserTemporary;
+
     return RestoredDevice(
       hasSession: true,
       phone: lock.phone,
@@ -55,6 +57,7 @@ Future<RestoredDevice> restoreDeviceSession({
       biometricsEnabled: lock.biometricsEnabled,
       biometricLabel: bioLabel,
       failedAttempts: lock.failedAttempts,
+      isTemporary: isTemporary,
     );
   } catch (_) {
     return const RestoredDevice.none();
