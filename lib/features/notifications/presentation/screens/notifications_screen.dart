@@ -9,6 +9,7 @@ import '../../../home/presentation/state/home_pay_rent_providers.dart';
 import '../../../messages/presentation/state/messages_notifier.dart';
 import '../../domain/tenant_notification.dart';
 import '../state/notifications_providers.dart';
+import '../../../../core/platform/platform_channel_service.dart';
 
 /// Full-screen notification inbox showing security alerts, payment reminders,
 /// and property announcements.
@@ -19,6 +20,8 @@ class NotificationsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final notificationsAsync = ref.watch(tenantNotificationsProvider);
     final unread = ref.watch(unreadNotificationsProvider);
+    final hasNotificationPermission = ref.watch(notificationPermissionProvider);
+    final hasNetwork = ref.watch(networkStatusProvider);
     final asOf = DateTime.now()
         .toUtc()
         .add(const Duration(hours: 3))
@@ -68,126 +71,266 @@ class NotificationsScreen extends ConsumerWidget {
       ),
       body: SafeArea(
         top: false,
-        child: RefreshIndicator(
-          color: AppColors.forestGreen,
-          backgroundColor: AppColors.cardBackground,
-          onRefresh: () =>
-              ref.read(tenantNotificationsProvider.notifier).refresh(),
-          child: notificationsAsync.when(
-            loading: () => const Center(
-              child: CircularProgressIndicator(
-                strokeWidth: 2.2,
-                color: AppColors.forestGreen,
-              ),
-            ),
-            error: (_, _) => ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              children: [
-                const SizedBox(height: 60),
-                Center(
-                  child: Column(
-                    children: [
-                      const Icon(
-                        Icons.wifi_off_rounded,
-                        size: 48,
-                        color: AppColors.textMuted,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        'Could not load notifications',
-                        style: AppTypography.sans(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        'Pull down to try again',
-                        style: AppTypography.sans(
-                          fontSize: 13,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
+        child: Column(
+          children: [
+            if (!hasNetwork)
+              Container(
+                margin: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.xs,
                 ),
-              ],
-            ),
-            data: (items) {
-              if (items.isEmpty) {
-                return ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(AppSpacing.xl),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.terracottaLight,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
                   children: [
-                    const SizedBox(height: 80),
-                    Center(
-                      child: Container(
-                        key: const ValueKey('notifications_empty_state'),
-                        width: 72,
-                        height: 72,
-                        decoration: BoxDecoration(
-                          color: AppColors.cardBackground,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.borderLight),
-                        ),
-                        child: const Icon(
-                          Icons.notifications_none_rounded,
-                          size: 36,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
+                    const Icon(
+                      Icons.wifi_off_rounded,
+                      color: AppColors.terracotta,
+                      size: 16,
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                    Text(
-                      'No notifications yet',
-                      textAlign: TextAlign.center,
-                      style: AppTypography.editorialSerif(
-                        fontSize: 22,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
-                      ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(
                       child: Text(
-                        'Security alerts, temporary login PINs, and rent reminders from property management will appear here.',
-                        textAlign: TextAlign.center,
+                        'Device is offline',
                         style: AppTypography.sans(
-                          fontSize: 14,
-                          color: AppColors.textMuted,
-                          height: 1.4,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.terracotta,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => ref
+                          .read(networkStatusProvider.notifier)
+                          .openSettings(),
+                      child: Text(
+                        'Settings',
+                        style: AppTypography.sans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.terracotta,
                         ),
                       ),
                     ),
                   ],
-                );
-              }
-
-              return ListView.separated(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  AppSpacing.sm,
-                  AppSpacing.md,
-                  AppSpacing.xl,
                 ),
-                itemCount: items.length,
-                separatorBuilder: (_, _) =>
-                    const SizedBox(height: AppSpacing.sm),
-                itemBuilder: (context, index) {
-                  final notification = items[index];
-                  return _NotificationItemCard(
-                    notification: notification,
-                    asOf: asOf,
-                  );
-                },
-              );
-            },
-          ),
+              ),
+            if (!hasNotificationPermission)
+              Container(
+                key: const ValueKey('notification_permission_banner'),
+                margin: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.xs,
+                ),
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.mintBackground,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.borderLight),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.notifications_off_outlined,
+                      color: AppColors.forestGreen,
+                      size: 20,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Allow phone notifications',
+                            style: AppTypography.sans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.forestGreen,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Enable alerts to get instant notifications when your manager issues a new PIN or rent receipt.',
+                            style: AppTypography.sans(
+                              fontSize: 12,
+                              color: AppColors.textPrimary,
+                              height: 1.35,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          GestureDetector(
+                            key: const ValueKey('enable_notifications_button'),
+                            onTap: () async {
+                              final granted = await ref
+                                  .read(notificationPermissionProvider.notifier)
+                                  .requestPermission();
+                              if (!granted && context.mounted) {
+                                await ref
+                                    .read(
+                                      notificationPermissionProvider.notifier,
+                                    )
+                                    .openSettings();
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.forestGreen,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                'Enable in settings',
+                                style: AppTypography.sans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.pureWhite,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            Expanded(
+              child: RefreshIndicator(
+                color: AppColors.forestGreen,
+                backgroundColor: AppColors.cardBackground,
+                onRefresh: () =>
+                    ref.read(tenantNotificationsProvider.notifier).refresh(),
+
+                child: notificationsAsync.when(
+                  loading: () => const Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      color: AppColors.forestGreen,
+                    ),
+                  ),
+                  error: (_, _) => ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    children: [
+                      const SizedBox(height: 60),
+                      Center(
+                        child: Column(
+                          children: [
+                            const Icon(
+                              Icons.wifi_off_rounded,
+                              size: 48,
+                              color: AppColors.textMuted,
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              'Could not load notifications',
+                              style: AppTypography.sans(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              'Pull down to try again',
+                              style: AppTypography.sans(
+                                fontSize: 13,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  data: (items) {
+                    if (items.isEmpty) {
+                      return ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(AppSpacing.xl),
+                        children: [
+                          const SizedBox(height: 80),
+                          Center(
+                            child: Container(
+                              key: const ValueKey('notifications_empty_state'),
+                              width: 72,
+                              height: 72,
+                              decoration: BoxDecoration(
+                                color: AppColors.cardBackground,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.borderLight,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.notifications_none_rounded,
+                                size: 36,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          Text(
+                            'No notifications yet',
+                            textAlign: TextAlign.center,
+                            style: AppTypography.editorialSerif(
+                              fontSize: 22,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                            ),
+                            child: Text(
+                              'Security alerts, temporary login PINs, and rent reminders from property management will appear here.',
+                              textAlign: TextAlign.center,
+                              style: AppTypography.sans(
+                                fontSize: 14,
+                                color: AppColors.textMuted,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+
+                    return ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        AppSpacing.sm,
+                        AppSpacing.md,
+                        AppSpacing.xl,
+                      ),
+                      itemCount: items.length,
+                      separatorBuilder: (_, _) =>
+                          const SizedBox(height: AppSpacing.sm),
+                      itemBuilder: (context, index) {
+                        final notification = items[index];
+                        return _NotificationItemCard(
+                          notification: notification,
+                          asOf: asOf,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

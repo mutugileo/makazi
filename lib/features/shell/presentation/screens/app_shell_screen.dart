@@ -17,6 +17,7 @@ import '../../../payments/presentation/screens/payments_screen.dart';
 import '../../../payments/presentation/state/payments_providers.dart';
 import '../../../repairs/presentation/screens/repairs_screen.dart';
 import '../../../repairs/presentation/state/repairs_providers.dart';
+import '../../../../core/platform/platform_channel_service.dart';
 
 class AppShellScreen extends ConsumerWidget {
   const AppShellScreen({super.key});
@@ -31,6 +32,7 @@ class AppShellScreen extends ConsumerWidget {
 
     _popUpNewNotifications(context, ref);
 
+    final hasNetwork = ref.watch(networkStatusProvider);
     final isKeyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     final canHandleBack = _canHandleBack(ref);
 
@@ -43,23 +45,74 @@ class AppShellScreen extends ConsumerWidget {
       child: Scaffold(
         backgroundColor: AppColors.pageBackground,
         extendBody: true,
-        body: AnimatedSwitcher(
-          duration: motion.stateTransitionDuration,
-          switchInCurve: motion.standardEasing,
-          switchOutCurve: motion.standardEasing,
-          transitionBuilder: (child, animation) {
-            return FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0.02, 0),
-                  end: Offset.zero,
-                ).animate(animation),
-                child: child,
+        body: Column(
+          children: [
+            if (!hasNetwork)
+              Material(
+                color: AppColors.terracottaLight,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    MediaQuery.paddingOf(context).top + 4,
+                    16,
+                    8,
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.wifi_off_rounded,
+                        size: 18,
+                        color: AppColors.terracotta,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'No internet connection',
+                          style: AppTypography.sans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.terracotta,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => ref
+                            .read(networkStatusProvider.notifier)
+                            .openSettings(),
+                        child: Text(
+                          'Settings',
+                          style: AppTypography.sans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.terracotta,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            );
-          },
-          child: _buildCurrentScreen(navState.currentTab),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: motion.stateTransitionDuration,
+                switchInCurve: motion.standardEasing,
+                switchOutCurve: motion.standardEasing,
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0.02, 0),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  );
+                },
+                child: _buildCurrentScreen(navState.currentTab),
+              ),
+            ),
+          ],
         ),
         bottomNavigationBar: isKeyboardOpen
             ? null
@@ -89,6 +142,17 @@ class AppShellScreen extends ConsumerWidget {
       final seen = {for (final n in before) n.id};
       final fresh = after.where((n) => n.isUnread && !seen.contains(n.id));
       if (fresh.isEmpty) return;
+
+      for (final n in fresh) {
+        ref
+            .read(platformServiceProvider)
+            .showSystemNotification(
+              id: n.id.hashCode,
+              title: n.title,
+              body: n.body,
+            );
+      }
+
       final n = fresh.first;
       final messenger = ScaffoldMessenger.of(context);
       final banner = MaterialBanner(
