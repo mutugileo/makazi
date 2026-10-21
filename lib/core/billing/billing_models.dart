@@ -61,20 +61,20 @@ enum BillLineKind {
 @immutable
 class CompanyTheme {
   const CompanyTheme({
-    this.preset = 'forest',
-    this.primaryHex = '#0D382B',
-    this.navBgHex = '#0A261F',
-    this.accentHex = '#C6EE58',
+    this.preset = 'blue',
+    this.primaryHex = '#0A2540',
+    this.navBgHex = '#081B2E',
+    this.accentHex = '#38BDF8',
     this.logoUrl,
   });
 
   factory CompanyTheme.fromJson(Map<String, dynamic>? json) {
     if (json == null) return const CompanyTheme();
     return CompanyTheme(
-      preset: json['preset'] as String? ?? 'forest',
-      primaryHex: json['primary'] as String? ?? '#0D382B',
-      navBgHex: json['navBg'] as String? ?? '#0A261F',
-      accentHex: json['accent'] as String? ?? '#C6EE58',
+      preset: json['preset'] as String? ?? 'blue',
+      primaryHex: json['primary'] as String? ?? '#0A2540',
+      navBgHex: json['navBg'] as String? ?? '#081B2E',
+      accentHex: json['accent'] as String? ?? '#38BDF8',
       logoUrl: json['logoUrl'] as String?,
     );
   }
@@ -85,9 +85,26 @@ class CompanyTheme {
   final String accentHex;
   final String? logoUrl;
 
-  Color get primaryColor => _parseHex(primaryHex, const Color(0xFF0D382B));
-  Color get navBgColor => _parseHex(navBgHex, const Color(0xFF0A261F));
-  Color get accentColor => _parseHex(accentHex, const Color(0xFFC6EE58));
+  Color get primaryColor => _parseHex(primaryHex, const Color(0xFF0A2540));
+  Color get navBgColor => _parseHex(navBgHex, const Color(0xFF081B2E));
+  Color get accentColor => _parseHex(accentHex, const Color(0xFF38BDF8));
+
+  /// Accessible text/icon color for elements rendered on top of [accentColor].
+  Color get onAccentColor => accentColor.computeLuminance() > 0.45
+      ? (navBgColor.computeLuminance() < 0.2
+            ? navBgColor
+            : const Color(0xFF071A2C))
+      : const Color(0xFFFFFFFF);
+
+  /// Accessible text/icon color for elements rendered on top of [primaryColor].
+  Color get onPrimaryColor => primaryColor.computeLuminance() > 0.45
+      ? const Color(0xFF071A2C)
+      : const Color(0xFFFFFFFF);
+
+  /// Accessible text/icon color for elements rendered on top of [navBgColor].
+  Color get onNavBgColor => navBgColor.computeLuminance() > 0.45
+      ? const Color(0xFF071A2C)
+      : const Color(0xFFFFFFFF);
 
   static Color _parseHex(String hex, Color fallback) {
     try {
@@ -114,6 +131,34 @@ class CompanyTheme {
 
 /// Billing rules a landlord chooses for themselves.
 @immutable
+class PropertyPaymentDetail {
+  const PropertyPaymentDetail({
+    this.mpesaPaybill,
+    this.bankName,
+    this.bankAccount,
+    this.pesalinkPhone,
+    this.pesalinkPaybill,
+    this.pesalinkNotes,
+  });
+
+  factory PropertyPaymentDetail.fromJson(Map<String, dynamic> json) =>
+      PropertyPaymentDetail(
+        mpesaPaybill: json['mpesaPaybill'] as String?,
+        bankName: json['bankName'] as String?,
+        bankAccount: json['bankAccount'] as String?,
+        pesalinkPhone: json['pesalinkPhone'] as String?,
+        pesalinkPaybill: json['pesalinkPaybill'] as String?,
+        pesalinkNotes: json['pesalinkNotes'] as String?,
+      );
+
+  final String? mpesaPaybill;
+  final String? bankName;
+  final String? bankAccount;
+  final String? pesalinkPhone;
+  final String? pesalinkPaybill;
+  final String? pesalinkNotes;
+}
+
 class CompanySettings {
   const CompanySettings({
     required this.ledgerStartMonth,
@@ -123,6 +168,8 @@ class CompanySettings {
     required this.recordRetentionMonths,
     this.mpesaSimulation = false,
     this.theme = const CompanyTheme(),
+    this.pesalinkPhone,
+    this.propertyPayments = const {},
   });
 
   factory CompanySettings.fromJson(Map<String, dynamic> json) =>
@@ -138,6 +185,17 @@ class CompanySettings {
         theme: json['theme'] != null && json['theme'] is Map<String, dynamic>
             ? CompanyTheme.fromJson(json['theme'] as Map<String, dynamic>)
             : const CompanyTheme(),
+        pesalinkPhone: json['pesalinkPhone'] as String?,
+        propertyPayments:
+            json['propertyPayments'] != null &&
+                json['propertyPayments'] is Map<String, dynamic>
+            ? (json['propertyPayments'] as Map<String, dynamic>).map(
+                (k, v) => MapEntry(
+                  k,
+                  PropertyPaymentDetail.fromJson(v as Map<String, dynamic>),
+                ),
+              )
+            : const {},
       );
 
   /// First month on Makazi ('YYYY-MM').
@@ -156,6 +214,12 @@ class CompanySettings {
 
   /// Brand colors & style configured per company.
   final CompanyTheme theme;
+
+  /// Default company-wide PesaLink phone or alias.
+  final String? pesalinkPhone;
+
+  /// Per-property payment configuration overrides.
+  final Map<String, PropertyPaymentDetail> propertyPayments;
 }
 
 /// Makazi subscription. Stored and shown; not enforced or billed yet.

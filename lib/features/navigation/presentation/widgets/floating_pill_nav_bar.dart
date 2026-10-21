@@ -10,10 +10,12 @@ class FloatingPillNavBar extends StatelessWidget {
     super.key,
     required this.currentTab,
     required this.onTabSelected,
+    this.activeColor,
   });
 
   final AppTab currentTab;
   final ValueChanged<AppTab> onTabSelected;
+  final Color? activeColor;
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +58,7 @@ class FloatingPillNavBar extends StatelessWidget {
                     isSelected: currentTab == tab,
                     onTap: () => onTabSelected(tab),
                     motion: motion,
+                    activeColor: activeColor,
                   ),
                 ),
             ],
@@ -72,15 +75,22 @@ class _NavBarItem extends StatelessWidget {
     required this.isSelected,
     required this.onTap,
     required this.motion,
+    this.activeColor,
   });
 
   final AppTab tab;
   final bool isSelected;
   final VoidCallback onTap;
   final AppMotionThemeExtension motion;
+  final Color? activeColor;
 
   @override
   Widget build(BuildContext context) {
+    final effectiveActive = activeColor ?? const Color(0xFF0A2540);
+    final selectedTextColor = effectiveActive.computeLuminance() > 0.45
+        ? const Color(0xFF071A2C)
+        : AppColors.pureWhite;
+
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -89,7 +99,7 @@ class _NavBarItem extends StatelessWidget {
         curve: motion.standardEasing,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.forestGreen : Colors.transparent,
+          color: isSelected ? effectiveActive : Colors.transparent,
           borderRadius: BorderRadius.circular(28),
         ),
         child: Text(
@@ -98,7 +108,7 @@ class _NavBarItem extends StatelessWidget {
           style: AppTypography.sans(
             fontSize: 14,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            color: isSelected ? AppColors.pureWhite : AppColors.textSecondary,
+            color: isSelected ? selectedTextColor : AppColors.textSecondary,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,

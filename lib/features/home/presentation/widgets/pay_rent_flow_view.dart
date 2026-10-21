@@ -432,6 +432,13 @@ class _PayRentFormView extends ConsumerWidget {
                       label: 'Account',
                       value: _spacedAccount(account.effectiveBankAccount),
                     ),
+                    if (account.effectivePesalinkPhone != null) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      _BankRow(
+                        label: 'PesaLink phone',
+                        value: account.effectivePesalinkPhone!,
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.sm),
                     _BankRow(label: 'Reference', value: account.accountNumber),
                   ],
@@ -443,6 +450,7 @@ class _PayRentFormView extends ConsumerWidget {
                 text:
                     'Bank: ${account.effectiveBankName}\n'
                     'Account: ${account.effectiveBankAccount}\n'
+                    '${account.effectivePesalinkPhone != null ? 'PesaLink: ${account.effectivePesalinkPhone}\n' : ''}'
                     'Reference: ${account.accountNumber}',
                 confirmation: 'Bank details copied to clipboard',
               ),
@@ -630,7 +638,7 @@ class _MpesaStepsSheet extends StatelessWidget {
   }
 }
 
-class _CopyDetailsButton extends StatelessWidget {
+class _CopyDetailsButton extends ConsumerWidget {
   const _CopyDetailsButton({
     required this.label,
     required this.text,
@@ -642,7 +650,13 @@ class _CopyDetailsButton extends StatelessWidget {
   final String confirmation;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final companyTheme = ref
+        .watch(tenantAccountProvider)
+        .company
+        .settings
+        .theme;
+
     return SizedBox(
       width: double.infinity,
       height: 52,
@@ -659,7 +673,7 @@ class _CopyDetailsButton extends StatelessWidget {
                   color: AppColors.pureWhite,
                 ),
               ),
-              backgroundColor: AppColors.forestGreen,
+              backgroundColor: companyTheme.primaryColor,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1210,25 +1224,36 @@ class _PaymentReceivedView extends ConsumerWidget {
           ),
           const SizedBox(height: 70),
           Center(
-            child: Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: AppColors.forestGreen,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.forestGreen.withValues(alpha: 0.25),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
+            child: Builder(
+              builder: (ctx) {
+                final companyTheme = ref
+                    .watch(tenantAccountProvider)
+                    .company
+                    .settings
+                    .theme;
+                return Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: companyTheme.primaryColor,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: companyTheme.primaryColor.withValues(
+                          alpha: 0.25,
+                        ),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: const Icon(
-                Icons.check_rounded,
-                color: AppColors.pureWhite,
-                size: 34,
-              ),
+                  child: const Icon(
+                    Icons.check_rounded,
+                    color: AppColors.pureWhite,
+                    size: 34,
+                  ),
+                );
+              },
             ),
           ),
           const SizedBox(height: 24),

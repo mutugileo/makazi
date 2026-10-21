@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/billing/billing_models.dart';
 import '../../../../core/models/payment_receipt.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -11,11 +12,13 @@ class RecentTransactionsCard extends StatelessWidget {
     required this.transactions,
     required this.onSeeAllPressed,
     this.onTransactionTapped,
+    this.theme,
   });
 
   final List<PaymentReceipt> transactions;
   final VoidCallback onSeeAllPressed;
   final ValueChanged<int>? onTransactionTapped;
+  final CompanyTheme? theme;
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +48,7 @@ class RecentTransactionsCard extends StatelessWidget {
                   style: AppTypography.sans(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.mintAccent,
+                    color: theme?.primaryColor ?? AppColors.mintAccent,
                   ),
                 ),
               ),
@@ -75,6 +78,7 @@ class RecentTransactionsCard extends StatelessWidget {
                       '${displayItems[i].dateLabel} · ${displayItems[i].methodLabel}',
                   amount: displayItems[i].amountLabel,
                   onTap: () => onTransactionTapped?.call(i),
+                  theme: theme,
                 ),
                 if (i < displayItems.length - 1)
                   const Divider(height: 1, color: AppColors.borderLight),
@@ -94,6 +98,7 @@ class _TransactionTile extends StatelessWidget {
     required this.subtitle,
     required this.amount,
     required this.onTap,
+    this.theme,
   });
 
   final String initial;
@@ -101,6 +106,7 @@ class _TransactionTile extends StatelessWidget {
   final String subtitle;
   final String amount;
   final VoidCallback onTap;
+  final CompanyTheme? theme;
 
   @override
   Widget build(BuildContext context) {
@@ -117,8 +123,10 @@ class _TransactionTile extends StatelessWidget {
             Container(
               width: 40,
               height: 40,
-              decoration: const BoxDecoration(
-                color: AppColors.mintBackground,
+              decoration: BoxDecoration(
+                color: theme != null
+                    ? theme!.primaryColor.withValues(alpha: 0.12)
+                    : AppColors.mintBackground,
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -127,7 +135,7 @@ class _TransactionTile extends StatelessWidget {
                   style: AppTypography.sans(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.mintAccent,
+                    color: theme?.primaryColor ?? AppColors.mintAccent,
                   ),
                 ),
               ),

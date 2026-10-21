@@ -72,9 +72,14 @@ class HeroBalanceCard extends StatelessWidget {
         ? 'Grace period to ${BillingDates.formatDayMonth(bill.graceDate)}'
         : 'Due ${BillingDates.formatDayMonth(bill!.dueDate)}';
 
-    final effectivePrimary = theme?.primaryColor ?? AppColors.forestGreen;
-    final effectiveNavBg = theme?.navBgColor ?? AppColors.forestGreenDark;
-    final effectiveAccent = theme?.accentColor ?? AppColors.limeAccent;
+    final effectivePrimary = theme?.primaryColor ?? const Color(0xFF0A2540);
+    final effectiveNavBg = theme?.navBgColor ?? const Color(0xFF081B2E);
+    final effectiveAccent = theme?.accentColor ?? const Color(0xFF38BDF8);
+    final effectiveOnAccent =
+        theme?.onAccentColor ??
+        (effectiveAccent.computeLuminance() > 0.45
+            ? const Color(0xFF071A2C)
+            : Colors.white);
 
     return Container(
       decoration: BoxDecoration(
@@ -87,9 +92,7 @@ class HeroBalanceCard extends StatelessWidget {
           Positioned.fill(
             child: CustomPaint(
               painter: _ConcentricArcsPainter(
-                color: theme != null
-                    ? effectiveAccent.withValues(alpha: 0.2)
-                    : AppColors.forestGreenSurface.withValues(alpha: 0.6),
+                color: effectiveAccent.withValues(alpha: 0.22),
               ),
             ),
           ),
@@ -111,7 +114,9 @@ class HeroBalanceCard extends StatelessWidget {
                             'Balance due',
                             style: AppTypography.sans(
                               fontSize: 14,
-                              color: AppColors.onDarkMuted,
+                              color: AppColors.pureWhite.withValues(
+                                alpha: 0.75,
+                              ),
                               fontWeight: FontWeight.w400,
                             ),
                           ),
@@ -121,25 +126,19 @@ class HeroBalanceCard extends StatelessWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: theme != null
-                                  ? effectiveNavBg.withValues(alpha: 0.7)
-                                  : AppColors.forestGreenSurface,
+                              color: effectiveNavBg.withValues(alpha: 0.7),
                               borderRadius: BorderRadius.circular(
                                 AppSpacing.radiusFull,
                               ),
                               border: Border.all(
-                                color: theme != null
-                                    ? effectiveAccent.withValues(alpha: 0.35)
-                                    : AppColors.forestGreenLight,
+                                color: effectiveAccent.withValues(alpha: 0.35),
                               ),
                             ),
                             child: Text(
                               pillLabel,
                               style: AppTypography.sans(
                                 fontSize: 12,
-                                color: theme != null
-                                    ? effectiveAccent
-                                    : AppColors.mintPillText,
+                                color: effectiveAccent,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -165,7 +164,9 @@ class HeroBalanceCard extends StatelessWidget {
                           value: progress,
                           minHeight: 4,
                           color: effectiveAccent,
-                          backgroundColor: AppColors.onDarkTrack,
+                          backgroundColor: effectiveNavBg.withValues(
+                            alpha: 0.5,
+                          ),
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xs),
@@ -182,7 +183,9 @@ class HeroBalanceCard extends StatelessWidget {
                                   : '${formatKes(paid)} paid of ${formatKes(totalDue)}',
                               style: AppTypography.sans(
                                 fontSize: 13,
-                                color: AppColors.onDarkMuted,
+                                color: AppColors.pureWhite.withValues(
+                                  alpha: 0.75,
+                                ),
                               ),
                               maxLines: 2,
                             ),
@@ -197,7 +200,9 @@ class HeroBalanceCard extends StatelessWidget {
                               textAlign: TextAlign.end,
                               style: AppTypography.sans(
                                 fontSize: 13,
-                                color: AppColors.onDarkMuted,
+                                color: AppColors.pureWhite.withValues(
+                                  alpha: 0.75,
+                                ),
                               ),
                             ),
                           ),
@@ -214,9 +219,13 @@ class HeroBalanceCard extends StatelessWidget {
                     onPressed: canPay ? onPayRentPressed : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: effectiveAccent,
-                      foregroundColor: effectiveNavBg,
-                      disabledBackgroundColor: AppColors.onDarkTrack,
-                      disabledForegroundColor: AppColors.onDarkMuted,
+                      foregroundColor: effectiveOnAccent,
+                      disabledBackgroundColor: effectiveNavBg.withValues(
+                        alpha: 0.45,
+                      ),
+                      disabledForegroundColor: AppColors.pureWhite.withValues(
+                        alpha: 0.6,
+                      ),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -231,8 +240,8 @@ class HeroBalanceCard extends StatelessWidget {
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                             color: canPay
-                                ? effectiveNavBg
-                                : AppColors.onDarkMuted,
+                                ? effectiveOnAccent
+                                : AppColors.pureWhite.withValues(alpha: 0.6),
                           ),
                         ),
                         if (canPay) ...[
@@ -240,7 +249,7 @@ class HeroBalanceCard extends StatelessWidget {
                           Icon(
                             Icons.arrow_forward_rounded,
                             size: 18,
-                            color: effectiveNavBg,
+                            color: effectiveOnAccent,
                           ),
                         ],
                       ],
@@ -264,7 +273,7 @@ class _ConcentricArcsPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color ?? AppColors.forestGreenSurface.withValues(alpha: 0.6)
+      ..color = color ?? const Color(0xFF38BDF8).withValues(alpha: 0.22)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 

@@ -116,6 +116,21 @@ class TenantAccountState {
     return company.bankAccount;
   }
 
+  /// Effective PesaLink phone: prefers apartment override if present,
+  /// falling back to the company default.
+  String? get effectivePesalinkPhone {
+    final propCustom =
+        company.settings.propertyPayments[property.id]?.pesalinkPhone;
+    if (propCustom != null && propCustom.trim().isNotEmpty) {
+      return propCustom.trim();
+    }
+    final compDefault = company.settings.pesalinkPhone;
+    if (compDefault != null && compDefault.trim().isNotEmpty) {
+      return compDefault.trim();
+    }
+    return null;
+  }
+
   /// Everything paid since the landlord joined Makazi (ledgerStartMonth).
   int get totalPaid => seed.payments.fold(0, (sum, p) => sum + p.amount);
 

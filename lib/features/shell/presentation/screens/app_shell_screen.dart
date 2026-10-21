@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_motion.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../notifications/presentation/state/notifications_providers.dart';
@@ -62,16 +61,13 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
     });
 
     final navState = ref.watch(navigationProvider);
-    final theme = Theme.of(context);
-    final motion =
-        theme.extension<AppMotionThemeExtension>() ??
-        const AppMotionThemeExtension.regular();
-
     _popUpNewNotifications(context, ref);
 
     final hasNetwork = ref.watch(networkStatusProvider);
     final isKeyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     final canHandleBack = _canHandleBack(ref);
+    final account = ref.watch(tenantAccountProvider);
+    final companyTheme = account.company.settings.theme;
 
     return PopScope(
       canPop: !canHandleBack,
@@ -130,23 +126,14 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
                 ),
               ),
             Expanded(
-              child: AnimatedSwitcher(
-                duration: motion.stateTransitionDuration,
-                switchInCurve: motion.standardEasing,
-                switchOutCurve: motion.standardEasing,
-                transitionBuilder: (child, animation) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0.02, 0),
-                        end: Offset.zero,
-                      ).animate(animation),
-                      child: child,
-                    ),
-                  );
-                },
-                child: _buildCurrentScreen(navState.currentTab),
+              child: IndexedStack(
+                index: navState.currentTab.index,
+                children: const [
+                  HomeScreen(key: ValueKey(AppTab.home)),
+                  PaymentsScreen(key: ValueKey(AppTab.payments)),
+                  RepairsScreen(key: ValueKey(AppTab.repairs)),
+                  MessagesScreen(key: ValueKey(AppTab.messages)),
+                ],
               ),
             ),
           ],
@@ -155,13 +142,9 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
             ? null
             : FloatingPillNavBar(
                 currentTab: navState.currentTab,
+                activeColor: companyTheme.primaryColor,
                 onTabSelected: (tab) {
                   ref.read(navigationProvider.notifier).selectTab(tab);
-                  if (tab == AppTab.home) {
-                    ref
-                        .read(tenantAccountProvider.notifier)
-                        .refreshFromDatabase();
-                  }
                 },
               ),
       ),
@@ -191,13 +174,18 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
       }
 
       final n = fresh.first;
+      final companyTheme = ref
+          .read(tenantAccountProvider)
+          .company
+          .settings
+          .theme;
       final messenger = ScaffoldMessenger.of(context);
       final banner = MaterialBanner(
         key: ValueKey('notification_banner_${n.id}'),
-        backgroundColor: AppColors.forestGreen,
-        leading: const Icon(
+        backgroundColor: companyTheme.primaryColor,
+        leading: Icon(
           Icons.notifications_active_outlined,
-          color: AppColors.limeAccent,
+          color: companyTheme.accentColor,
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -243,7 +231,7 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
               'View',
               style: AppTypography.sans(
                 fontWeight: FontWeight.w600,
-                color: AppColors.limeAccent,
+                color: companyTheme.accentColor,
               ),
             ),
           ),
@@ -345,19 +333,6 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
           navNotifier.popTab();
         }
         return;
-    }
-  }
-
-  Widget _buildCurrentScreen(AppTab tab) {
-    switch (tab) {
-      case AppTab.home:
-        return const HomeScreen(key: ValueKey(AppTab.home));
-      case AppTab.payments:
-        return const PaymentsScreen(key: ValueKey(AppTab.payments));
-      case AppTab.repairs:
-        return const RepairsScreen(key: ValueKey(AppTab.repairs));
-      case AppTab.messages:
-        return const MessagesScreen(key: ValueKey(AppTab.messages));
     }
   }
 }

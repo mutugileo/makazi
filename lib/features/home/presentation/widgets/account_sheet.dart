@@ -23,6 +23,8 @@ class AccountSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final unread = ref.watch(unreadNotificationsProvider);
 
+    final companyTheme = account.company.settings.theme;
+
     return SafeArea(
       child: SingleChildScrollView(
         child: Padding(
@@ -81,12 +83,14 @@ class AccountSheet extends ConsumerWidget {
                                 width: 36,
                                 height: 36,
                                 decoration: BoxDecoration(
-                                  color: AppColors.limeSoft,
+                                  color: companyTheme.accentColor.withValues(
+                                    alpha: 0.15,
+                                  ),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.key_outlined,
-                                  color: AppColors.forestGreen,
+                                  color: companyTheme.primaryColor,
                                   size: 18,
                                 ),
                               ),
@@ -145,12 +149,14 @@ class AccountSheet extends ConsumerWidget {
                                 width: 36,
                                 height: 36,
                                 decoration: BoxDecoration(
-                                  color: AppColors.avatarBackground,
+                                  color: companyTheme.primaryColor.withValues(
+                                    alpha: 0.12,
+                                  ),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.notifications_none_rounded,
-                                  color: AppColors.forestGreen,
+                                  color: companyTheme.primaryColor,
                                   size: 20,
                                 ),
                               ),

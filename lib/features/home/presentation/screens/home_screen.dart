@@ -245,8 +245,8 @@ class _HomeDashboardView extends StatelessWidget {
                         child: Container(
                           width: 44,
                           height: 44,
-                          decoration: const BoxDecoration(
-                            color: AppColors.avatarBackground,
+                          decoration: BoxDecoration(
+                            color: companyTheme.primaryColor,
                             shape: BoxShape.circle,
                           ),
                           child: Center(
@@ -255,7 +255,7 @@ class _HomeDashboardView extends StatelessWidget {
                               style: AppTypography.sans(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.avatarText,
+                                color: AppColors.pureWhite,
                               ),
                             ),
                           ),
@@ -385,6 +385,7 @@ class _HomeDashboardView extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
             RecentTransactionsCard(
               transactions: transactions,
+              theme: companyTheme,
               onSeeAllPressed: onSeeAllPressed,
               onTransactionTapped: onTransactionTapped,
             ),
