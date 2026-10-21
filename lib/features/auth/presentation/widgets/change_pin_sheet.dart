@@ -13,6 +13,7 @@ import 'auth_scaffold.dart';
 class ChangePinSheet extends ConsumerStatefulWidget {
   const ChangePinSheet({super.key, this.isTemporaryPrompt = false});
 
+  /// Whether this sheet was prompted by a temporary PIN login.
   final bool isTemporaryPrompt;
 
   static Future<void> show(
