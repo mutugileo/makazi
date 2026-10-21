@@ -15,6 +15,7 @@ class HeroBalanceCard extends StatelessWidget {
     this.asOf,
     this.recordsKeptUntil,
     this.firstBillDate,
+    this.theme,
   });
 
   /// The current month's bill; null before the first bill is issued.
@@ -31,6 +32,9 @@ class HeroBalanceCard extends StatelessWidget {
 
   /// New tenants with no bill yet: when the first one is issued.
   final String? firstBillDate;
+
+  /// Optional company theme for landlord-specific branding.
+  final CompanyTheme? theme;
 
   @override
   Widget build(BuildContext context) {
@@ -68,16 +72,26 @@ class HeroBalanceCard extends StatelessWidget {
         ? 'Grace period to ${BillingDates.formatDayMonth(bill.graceDate)}'
         : 'Due ${BillingDates.formatDayMonth(bill!.dueDate)}';
 
+    final effectivePrimary = theme?.primaryColor ?? AppColors.forestGreen;
+    final effectiveNavBg = theme?.navBgColor ?? AppColors.forestGreenDark;
+    final effectiveAccent = theme?.accentColor ?? AppColors.limeAccent;
+
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.forestGreen,
+        color: effectivePrimary,
         borderRadius: BorderRadius.circular(24),
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
           Positioned.fill(
-            child: CustomPaint(painter: _ConcentricArcsPainter()),
+            child: CustomPaint(
+              painter: _ConcentricArcsPainter(
+                color: theme != null
+                    ? effectiveAccent.withValues(alpha: 0.2)
+                    : AppColors.forestGreenSurface.withValues(alpha: 0.6),
+              ),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
@@ -107,19 +121,25 @@ class HeroBalanceCard extends StatelessWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: AppColors.forestGreenSurface,
+                              color: theme != null
+                                  ? effectiveNavBg.withValues(alpha: 0.7)
+                                  : AppColors.forestGreenSurface,
                               borderRadius: BorderRadius.circular(
                                 AppSpacing.radiusFull,
                               ),
                               border: Border.all(
-                                color: AppColors.forestGreenLight,
+                                color: theme != null
+                                    ? effectiveAccent.withValues(alpha: 0.35)
+                                    : AppColors.forestGreenLight,
                               ),
                             ),
                             child: Text(
                               pillLabel,
                               style: AppTypography.sans(
                                 fontSize: 12,
-                                color: AppColors.mintPillText,
+                                color: theme != null
+                                    ? effectiveAccent
+                                    : AppColors.mintPillText,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -144,7 +164,7 @@ class HeroBalanceCard extends StatelessWidget {
                         child: LinearProgressIndicator(
                           value: progress,
                           minHeight: 4,
-                          color: AppColors.limeAccent,
+                          color: effectiveAccent,
                           backgroundColor: AppColors.onDarkTrack,
                         ),
                       ),
@@ -193,8 +213,8 @@ class HeroBalanceCard extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: canPay ? onPayRentPressed : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.limeAccent,
-                      foregroundColor: AppColors.forestGreenDark,
+                      backgroundColor: effectiveAccent,
+                      foregroundColor: effectiveNavBg,
                       disabledBackgroundColor: AppColors.onDarkTrack,
                       disabledForegroundColor: AppColors.onDarkMuted,
                       elevation: 0,
@@ -211,16 +231,16 @@ class HeroBalanceCard extends StatelessWidget {
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                             color: canPay
-                                ? AppColors.forestGreenDark
+                                ? effectiveNavBg
                                 : AppColors.onDarkMuted,
                           ),
                         ),
                         if (canPay) ...[
                           const SizedBox(width: AppSpacing.xs),
-                          const Icon(
+                          Icon(
                             Icons.arrow_forward_rounded,
                             size: 18,
-                            color: AppColors.forestGreenDark,
+                            color: effectiveNavBg,
                           ),
                         ],
                       ],
@@ -237,10 +257,14 @@ class HeroBalanceCard extends StatelessWidget {
 }
 
 class _ConcentricArcsPainter extends CustomPainter {
+  const _ConcentricArcsPainter({this.color});
+
+  final Color? color;
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.forestGreenSurface.withValues(alpha: 0.6)
+      ..color = color ?? AppColors.forestGreenSurface.withValues(alpha: 0.6)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
@@ -251,5 +275,6 @@ class _ConcentricArcsPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _ConcentricArcsPainter oldDelegate) =>
+      oldDelegate.color != color;
 }

@@ -133,8 +133,10 @@ class _HomeDashboardView extends StatelessWidget {
     final systemBottomPadding = mediaQuery.padding.bottom;
     final scrollBottomPadding = systemBottomPadding + 86.0;
 
+    final companyTheme = account.company.settings.theme;
+
     return RefreshIndicator(
-      color: AppColors.forestGreen,
+      color: companyTheme.primaryColor,
       backgroundColor: AppColors.cardBackground,
       onRefresh: onRefresh,
       child: SingleChildScrollView(
@@ -216,8 +218,8 @@ class _HomeDashboardView extends StatelessWidget {
                                   child: Container(
                                     width: 8,
                                     height: 8,
-                                    decoration: const BoxDecoration(
-                                      color: AppColors.forestGreen,
+                                    decoration: BoxDecoration(
+                                      color: companyTheme.primaryColor,
                                       shape: BoxShape.circle,
                                     ),
                                   ),
@@ -325,7 +327,7 @@ class _HomeDashboardView extends StatelessWidget {
                       onPressed: () =>
                           ChangePinSheet.show(context, isTemporaryPrompt: true),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.forestGreen,
+                        backgroundColor: companyTheme.primaryColor,
                         foregroundColor: AppColors.pureWhite,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -357,6 +359,7 @@ class _HomeDashboardView extends StatelessWidget {
               asOf: account.seed.asOf,
               recordsKeptUntil: account.recordsKeptUntil,
               firstBillDate: account.firstBillDate,
+              theme: companyTheme,
               onPayRentPressed: onPayRentPressed,
               onBillPressed: account.currentBill != null
                   ? () => onBillPressed(account.currentBill!)

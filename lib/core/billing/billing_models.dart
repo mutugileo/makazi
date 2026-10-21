@@ -1,3 +1,4 @@
+import 'dart:ui' show Color;
 import 'package:flutter/foundation.dart';
 
 // Mirrors the types in PropAdmin/src/lib/billing.ts and the JSON shape of
@@ -56,6 +57,61 @@ enum BillLineKind {
   final String label;
 }
 
+/// Landlord custom brand theme configured via MakaziSuperAdmin.
+@immutable
+class CompanyTheme {
+  const CompanyTheme({
+    this.preset = 'forest',
+    this.primaryHex = '#0D382B',
+    this.navBgHex = '#0A261F',
+    this.accentHex = '#C6EE58',
+    this.logoUrl,
+  });
+
+  factory CompanyTheme.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return const CompanyTheme();
+    return CompanyTheme(
+      preset: json['preset'] as String? ?? 'forest',
+      primaryHex: json['primary'] as String? ?? '#0D382B',
+      navBgHex: json['navBg'] as String? ?? '#0A261F',
+      accentHex: json['accent'] as String? ?? '#C6EE58',
+      logoUrl: json['logoUrl'] as String?,
+    );
+  }
+
+  final String preset;
+  final String primaryHex;
+  final String navBgHex;
+  final String accentHex;
+  final String? logoUrl;
+
+  Color get primaryColor => _parseHex(primaryHex, const Color(0xFF0D382B));
+  Color get navBgColor => _parseHex(navBgHex, const Color(0xFF0A261F));
+  Color get accentColor => _parseHex(accentHex, const Color(0xFFC6EE58));
+
+  static Color _parseHex(String hex, Color fallback) {
+    try {
+      final clean = hex.replaceAll('#', '').trim();
+      if (clean.length == 6) {
+        return Color(int.parse('FF$clean', radix: 16));
+      } else if (clean.length == 8) {
+        return Color(int.parse(clean, radix: 16));
+      }
+      return fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  Map<String, dynamic> toJson() => {
+    'preset': preset,
+    'primary': primaryHex,
+    'navBg': navBgHex,
+    'accent': accentHex,
+    if (logoUrl != null) 'logoUrl': logoUrl,
+  };
+}
+
 /// Billing rules a landlord chooses for themselves.
 @immutable
 class CompanySettings {
@@ -66,6 +122,7 @@ class CompanySettings {
     required this.depositSchedule,
     required this.recordRetentionMonths,
     this.mpesaSimulation = false,
+    this.theme = const CompanyTheme(),
   });
 
   factory CompanySettings.fromJson(Map<String, dynamic> json) =>
@@ -78,6 +135,9 @@ class CompanySettings {
         ),
         recordRetentionMonths: json['recordRetentionMonths'] as int,
         mpesaSimulation: json['mpesaSimulation'] == true,
+        theme: json['theme'] != null && json['theme'] is Map<String, dynamic>
+            ? CompanyTheme.fromJson(json['theme'] as Map<String, dynamic>)
+            : const CompanyTheme(),
       );
 
   /// First month on Makazi ('YYYY-MM').
@@ -93,6 +153,9 @@ class CompanySettings {
   /// database records as a flagged test payment. Off unless the owner turns
   /// it on in Settings; real STK push needs Daraja.
   final bool mpesaSimulation;
+
+  /// Brand colors & style configured per company.
+  final CompanyTheme theme;
 }
 
 /// Makazi subscription. Stored and shown; not enforced or billed yet.
