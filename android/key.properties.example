@@ -1,0 +1,7 @@
+# Example release signing configuration for Makazi.
+# Copy this file to `android/key.properties` and fill in your local keystore path & credentials.
+# `android/key.properties` is gitignored and will never be committed.
+storePassword=your_store_password_here
+keyPassword=your_key_password_here
+keyAlias=upload
+storeFile=/path/to/makazi-upload.jks

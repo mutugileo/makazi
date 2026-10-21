@@ -1,4 +1,4 @@
-package com.codzure.propmgt.prop_mgt_app
+package com.codzure.makazi
 
 import android.Manifest
 import android.app.NotificationChannel
