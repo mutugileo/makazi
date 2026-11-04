@@ -42,9 +42,7 @@ Future<void> _enterPin(WidgetTester tester, String pin) async {
 }
 
 void main() {
-  testWidgets('first sign-in: temporary password, new password, PIN, home', (
-    tester,
-  ) async {
+  testWidgets('first sign-in: temporary password, PIN, home', (tester) async {
     tester.view.physicalSize = const Size(390 * 2, 844 * 2);
     tester.view.devicePixelRatio = 2.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -90,18 +88,8 @@ void main() {
     await tester.tap(find.widgetWithText(ElevatedButton, 'Sign in'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Choose a password'), findsOneWidget);
-    await tester.enterText(
-      find.byKey(const ValueKey('new_password')),
-      'mvua ya asubuhi',
-    );
-    await tester.enterText(
-      find.byKey(const ValueKey('confirm_password')),
-      'mvua ya asubuhi',
-    );
-    await tester.tap(find.text('Save password'));
-    await tester.pumpAndSettle();
-
+    // No separate password step: the PIN replaces the temporary password.
+    expect(find.text('Choose a password'), findsNothing);
     expect(find.text('Create a PIN'), findsOneWidget);
     await _enterPin(tester, '1234');
     expect(find.text('Avoid number sequences like 1234'), findsOneWidget);

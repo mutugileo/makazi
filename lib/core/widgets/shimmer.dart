@@ -19,8 +19,8 @@ class Shimmer extends StatefulWidget {
     super.key,
     required this.child,
     this.period = const Duration(milliseconds: 1400),
-    this.baseColor = const Color(0xFF1E293B),
-    this.highlightColor = const Color(0xFF334155),
+    this.baseColor = AppColors.forestGreenSurface,
+    this.highlightColor = AppColors.forestGreenLight,
   });
 
   final Widget child;

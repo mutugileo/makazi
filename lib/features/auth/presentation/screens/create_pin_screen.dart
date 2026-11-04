@@ -47,6 +47,14 @@ class _CreatePinScreenState extends ConsumerState<CreatePinScreen> {
         child: Column(
           children: [
             AuthErrorText(state.errorText),
+            if (state.isBusy)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'Saving your PIN…',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
             const SizedBox(height: 24),
             PinPad(key: ValueKey('pin_pad_$confirming'), onCompleted: _onPin),
           ],

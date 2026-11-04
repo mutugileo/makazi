@@ -1,3 +1,4 @@
+import 'package:prop_mgt_app/core/theme/brand_colors.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/billing/billing_models.dart';
 import '../../../../core/models/payment_receipt.dart';
@@ -48,7 +49,7 @@ class RecentTransactionsCard extends StatelessWidget {
                   style: AppTypography.sans(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: theme?.primaryColor ?? AppColors.mintAccent,
+                    color: context.brand.link,
                   ),
                 ),
               ),
@@ -126,7 +127,7 @@ class _TransactionTile extends StatelessWidget {
               decoration: BoxDecoration(
                 color: theme != null
                     ? theme!.primaryColor.withValues(alpha: 0.12)
-                    : AppColors.mintBackground,
+                    : context.brand.tint,
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -135,7 +136,7 @@ class _TransactionTile extends StatelessWidget {
                   style: AppTypography.sans(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: theme?.primaryColor ?? AppColors.mintAccent,
+                    color: context.brand.link,
                   ),
                 ),
               ),

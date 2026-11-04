@@ -1,3 +1,4 @@
+import 'package:prop_mgt_app/core/theme/brand_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/data/data_mode.dart';
@@ -144,8 +145,8 @@ class _Problem extends StatelessWidget {
         ElevatedButton(
           onPressed: onRetry,
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.mintAccent,
-            foregroundColor: AppColors.pureWhite,
+            backgroundColor: context.brand.button,
+            foregroundColor: context.brand.onButton,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
@@ -166,7 +167,7 @@ class _StaleBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.forestGreen,
+      color: context.brand.ink,
       borderRadius: BorderRadius.circular(12),
       child: Padding(
         padding: const EdgeInsets.only(left: AppSpacing.md),

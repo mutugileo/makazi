@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/billing/billing_models.dart';
+import '../../../../core/theme/brand_colors.dart';
+import '../../../../core/theme/brand_theme_cache.dart';
 import '../../../../core/data/data_mode.dart';
 import '../../../../core/data/supabase_billing_providers.dart';
 import '../../../../core/data/supabase_billing_repository.dart';
@@ -20,7 +24,7 @@ final tenantAccountProvider =
 /// Null while nobody is signed in (or still on a one-time password, when the
 /// database shows nothing). Errors are shown with a retry, never replaced by
 /// seed data, so retries are manual.
-final liveTenantSeedProvider = FutureProvider<BillingSeed?>((ref) {
+final liveTenantSeedProvider = FutureProvider<BillingSeed?>((ref) async {
   if (!ref.watch(liveDataProvider)) return null;
   // Refetches on each sign-in (it passes through signed-out), not on lock.
   final canRead = ref.watch(
@@ -30,12 +34,21 @@ final liveTenantSeedProvider = FutureProvider<BillingSeed?>((ref) {
         AuthStage.enableBiometrics ||
         AuthStage.locked ||
         AuthStage.unlocked => true,
-        AuthStage.signedOut || AuthStage.mustChangePassword => false,
+        AuthStage.signedOut => false,
       },
     ),
   );
   if (!canRead) return null;
-  return ref.watch(supabaseBillingRepositoryProvider).fetchTenantSeed();
+  final seed = await ref
+      .watch(supabaseBillingRepositoryProvider)
+      .fetchTenantSeed();
+  // Remembered for the next launch's loading screens (colours only).
+  unawaited(
+    BrandThemeCache.write(
+      TenantAccountState.fromSeed(seed).company.settings.theme,
+    ),
+  );
+  return seed;
 }, retry: (_, _) => null);
 
 /// Live mode: refetches when the admin changes something for this tenant,
@@ -69,4 +82,29 @@ final tenantRealtimeProvider = Provider<TenantRealtime?>((ref) {
       );
   ref.onDispose(realtime.dispose);
   return realtime;
+});
+
+/// The company theme saved on this device by the last load. Null on a fresh
+/// install. Overridden at startup in main.dart.
+final cachedBrandThemeProvider = Provider<CompanyTheme?>((ref) => null);
+
+/// The company's brand colours. Makazi's own palette until the account has
+/// loaded. Never throws: reads the live seed directly, because the account
+/// notifier throws while it is still loading.
+final brandColorsProvider = Provider<BrandColors>((ref) {
+  if (ref.watch(liveDataProvider)) {
+    final seed = ref.watch(liveTenantSeedProvider).value;
+    if (seed == null) {
+      final cached = ref.watch(cachedBrandThemeProvider);
+      return cached == null
+          ? BrandColors.makazi
+          : BrandColors.fromTheme(cached);
+    }
+    return BrandColors.fromTheme(
+      TenantAccountState.fromSeed(seed).company.settings.theme,
+    );
+  }
+  return BrandColors.fromTheme(
+    ref.watch(tenantAccountProvider.select((s) => s.company.settings.theme)),
+  );
 });

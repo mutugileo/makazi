@@ -1,3 +1,4 @@
+import 'package:prop_mgt_app/core/theme/brand_colors.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -257,13 +258,13 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                         child: Container(
                           width: 36,
                           height: 36,
-                          decoration: const BoxDecoration(
-                            color: AppColors.mintAccent,
+                          decoration: BoxDecoration(
+                            color: context.brand.button,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.arrow_upward_rounded,
-                            color: AppColors.pureWhite,
+                            color: context.brand.onButton,
                             size: 20,
                           ),
                         ),
@@ -300,7 +301,7 @@ class _ChatMessageItem extends StatelessWidget {
               ),
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: AppColors.mintAccent,
+                color: context.brand.primary,
                 borderRadius: BorderRadius.circular(18),
               ),
               child: Text(

@@ -1,3 +1,4 @@
+import 'package:prop_mgt_app/core/theme/brand_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/billing/billing_engine.dart';
@@ -169,17 +170,17 @@ class _PaymentsListView extends StatelessWidget {
             child: TextButton.icon(
               key: const ValueKey('open_statement'),
               onPressed: onStatementPressed,
-              icon: const Icon(
+              icon: Icon(
                 Icons.description_outlined,
                 size: 18,
-                color: AppColors.mintAccent,
+                color: context.brand.link,
               ),
               label: Text(
                 'Statement of payments',
                 style: AppTypography.sans(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.mintAccent,
+                  color: context.brand.link,
                 ),
               ),
             ),
@@ -259,7 +260,7 @@ class _ViewToggle extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.symmetric(vertical: 10),
             decoration: BoxDecoration(
-              color: selected ? AppColors.textPrimary : Colors.transparent,
+              color: selected ? context.brand.primary : Colors.transparent,
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
@@ -268,7 +269,7 @@ class _ViewToggle extends StatelessWidget {
               style: AppTypography.sans(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: selected ? AppColors.pureWhite : AppColors.textMuted,
+                color: selected ? context.brand.onPrimary : AppColors.textMuted,
               ),
             ),
           ),
@@ -306,26 +307,19 @@ class _DepositStrip extends StatelessWidget {
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: AppColors.mintBackground,
+        color: context.brand.tint,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.lock_outline_rounded,
-            size: 18,
-            color: AppColors.mintAccent,
-          ),
+          Icon(Icons.lock_outline_rounded, size: 18, color: context.brand.link),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               account.isActive
                   ? 'Deposit held · refundable when you move out'
                   : 'Deposit settled on your final bill',
-              style: AppTypography.sans(
-                fontSize: 13,
-                color: AppColors.forestGreen,
-              ),
+              style: AppTypography.sans(fontSize: 13, color: context.brand.ink),
             ),
           ),
           if (account.isActive)
@@ -334,7 +328,7 @@ class _DepositStrip extends StatelessWidget {
               style: AppTypography.sans(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: AppColors.forestGreen,
+                color: context.brand.ink,
                 tabularFigures: true,
               ),
             ),
@@ -467,8 +461,8 @@ class _ReceiptTile extends StatelessWidget {
             Container(
               width: 40,
               height: 40,
-              decoration: const BoxDecoration(
-                color: AppColors.mintBackground,
+              decoration: BoxDecoration(
+                color: context.brand.tint,
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -477,7 +471,7 @@ class _ReceiptTile extends StatelessWidget {
                   style: AppTypography.sans(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.mintAccent,
+                    color: context.brand.link,
                   ),
                 ),
               ),

@@ -75,7 +75,7 @@ class _FakeRepository extends SupabaseBillingRepository {
   bool refuseSimulation = false;
 
   @override
-  Future<String> simulateMpesaPayment(int amount) async {
+  Future<String> simulateMpesaPayment(int amount, {String? tenancyId}) async {
     if (refuseSimulation) throw Exception('M-Pesa test mode is off');
     simulatedAmounts.add(amount);
     return 'RCT-2610-0999';

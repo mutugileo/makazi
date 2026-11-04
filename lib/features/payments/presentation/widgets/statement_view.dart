@@ -1,5 +1,7 @@
+import 'package:prop_mgt_app/core/theme/brand_colors.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/billing/billing_engine.dart';
+import '../../../../core/services/pdf_document_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -253,23 +255,53 @@ class StatementView extends StatelessWidget {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'PDF statements not available yet. Your property manager '
-                    'can print one for you.',
-                    style: AppTypography.sans(
-                      fontSize: 14,
-                      color: AppColors.pureWhite,
-                    ),
-                  ),
-                  backgroundColor: AppColors.forestGreen,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              ),
+              onPressed: () async {
+                try {
+                  await PdfDocumentService.downloadStatement(account: account);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Statement PDF ready',
+                          style: AppTypography.sans(
+                            fontSize: 14,
+                            color: AppColors.pureWhite,
+                          ),
+                        ),
+                        backgroundColor: context.brand.ink,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                } catch (_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Unable to generate statement PDF',
+                          style: AppTypography.sans(
+                            fontSize: 14,
+                            color: AppColors.pureWhite,
+                          ),
+                        ),
+                        backgroundColor: context.brand.ink,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                }
+              },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.mintAccent,
-                foregroundColor: AppColors.pureWhite,
+                backgroundColor: context.brand.button,
+                foregroundColor: context.brand.onButton,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -280,7 +312,7 @@ class StatementView extends StatelessWidget {
                 style: AppTypography.sans(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.pureWhite,
+                  color: context.brand.onButton,
                 ),
               ),
             ),

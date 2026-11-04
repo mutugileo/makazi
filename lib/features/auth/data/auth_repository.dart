@@ -34,7 +34,7 @@ class DemoAuthRepository implements AuthRepository {
         for (final account in kDemoAccounts)
           normalizeKenyanPhone(account.phone)!: _DemoAccount(
             password: account.password,
-            mustChangePassword: account.isTemporary,
+            isTemporary: account.isTemporary,
           ),
       };
 
@@ -56,9 +56,9 @@ class DemoAuthRepository implements AuthRepository {
       return SignInOutcome.invalidCredentials;
     }
     _signedInPhone = phone;
-    return account.mustChangePassword
-        ? SignInOutcome.mustChangePassword
-        : SignInOutcome.success;
+    // A temporary password is reported through isCurrentUserTemporary; the
+    // app then asks for a PIN, which replaces it.
+    return SignInOutcome.success;
   }
 
   @override
@@ -66,10 +66,7 @@ class DemoAuthRepository implements AuthRepository {
     await Future<void>.delayed(latency);
     final phone = _signedInPhone;
     if (phone == null) throw StateError('Not signed in');
-    _accounts[phone] = _DemoAccount(
-      password: newPassword,
-      mustChangePassword: false,
-    );
+    _accounts[phone] = _DemoAccount(password: newPassword, isTemporary: false);
   }
 
   @override
@@ -84,7 +81,7 @@ class DemoAuthRepository implements AuthRepository {
   bool get isCurrentUserTemporary {
     final phone = _signedInPhone;
     if (phone == null) return false;
-    return _accounts[phone]?.mustChangePassword ?? false;
+    return _accounts[phone]?.isTemporary ?? false;
   }
 
   @override
@@ -92,11 +89,8 @@ class DemoAuthRepository implements AuthRepository {
 }
 
 class _DemoAccount {
-  const _DemoAccount({
-    required this.password,
-    required this.mustChangePassword,
-  });
+  const _DemoAccount({required this.password, required this.isTemporary});
 
   final String password;
-  final bool mustChangePassword;
+  final bool isTemporary;
 }

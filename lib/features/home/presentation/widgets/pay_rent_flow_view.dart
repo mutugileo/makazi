@@ -1,3 +1,4 @@
+import 'package:prop_mgt_app/core/theme/brand_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -226,8 +227,8 @@ class _PayRentFormView extends ConsumerWidget {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: AppColors.mintAccent,
+                    borderSide: BorderSide(
+                      color: context.brand.link,
                       width: 1.5,
                     ),
                   ),
@@ -398,8 +399,8 @@ class _PayRentFormView extends ConsumerWidget {
                         }
                       : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.mintAccent,
-                    foregroundColor: AppColors.pureWhite,
+                    backgroundColor: context.brand.button,
+                    foregroundColor: context.brand.onButton,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -410,7 +411,7 @@ class _PayRentFormView extends ConsumerWidget {
                     style: AppTypography.sans(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.pureWhite,
+                      color: context.brand.onButton,
                     ),
                   ),
                 ),
@@ -510,8 +511,8 @@ class _MpesaPayNowButton extends StatelessWidget {
               }
             : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.mintAccent,
-          foregroundColor: AppColors.pureWhite,
+          backgroundColor: context.brand.button,
+          foregroundColor: context.brand.onButton,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -522,7 +523,7 @@ class _MpesaPayNowButton extends StatelessWidget {
           style: AppTypography.sans(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: AppColors.pureWhite,
+            color: context.brand.onButton,
           ),
         ),
       ),
@@ -581,8 +582,8 @@ class _MpesaStepsSheet extends StatelessWidget {
                     width: 24,
                     height: 24,
                     alignment: Alignment.center,
-                    decoration: const BoxDecoration(
-                      color: AppColors.mintBackground,
+                    decoration: BoxDecoration(
+                      color: context.brand.tint,
                       shape: BoxShape.circle,
                     ),
                     child: Text(
@@ -590,7 +591,7 @@ class _MpesaStepsSheet extends StatelessWidget {
                       style: AppTypography.sans(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.mintAccent,
+                        color: context.brand.link,
                       ),
                     ),
                   ),
@@ -670,7 +671,7 @@ class _CopyDetailsButton extends ConsumerWidget {
                 confirmation,
                 style: AppTypography.sans(
                   fontSize: 14,
-                  color: AppColors.pureWhite,
+                  color: companyTheme.onPrimaryColor,
                 ),
               ),
               backgroundColor: companyTheme.primaryColor,
@@ -683,8 +684,8 @@ class _CopyDetailsButton extends ConsumerWidget {
           );
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.mintAccent,
-          foregroundColor: AppColors.pureWhite,
+          backgroundColor: context.brand.button,
+          foregroundColor: context.brand.onButton,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -695,7 +696,7 @@ class _CopyDetailsButton extends ConsumerWidget {
           style: AppTypography.sans(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: AppColors.pureWhite,
+            color: context.brand.onButton,
           ),
         ),
       ),
@@ -722,10 +723,10 @@ class _AmountOptionChip extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.textPrimary : AppColors.cardBackground,
+          color: isSelected ? context.brand.primary : AppColors.cardBackground,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected ? AppColors.textPrimary : AppColors.borderLight,
+            color: isSelected ? context.brand.primary : AppColors.borderLight,
           ),
         ),
         child: Text(
@@ -733,7 +734,7 @@ class _AmountOptionChip extends StatelessWidget {
           style: AppTypography.sans(
             fontSize: 13,
             fontWeight: FontWeight.w500,
-            color: isSelected ? AppColors.pureWhite : AppColors.textPrimary,
+            color: isSelected ? context.brand.onPrimary : AppColors.textPrimary,
           ),
         ),
       ),
@@ -765,7 +766,7 @@ class _PaymentMethodCard extends StatelessWidget {
           color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? AppColors.mintAccent : AppColors.borderLight,
+            color: isSelected ? context.brand.link : AppColors.borderLight,
             width: isSelected ? 1.5 : 1.0,
           ),
         ),
@@ -802,7 +803,7 @@ class _PaymentMethodCard extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: isSelected
-                      ? AppColors.mintAccent
+                      ? context.brand.link
                       : AppColors.borderStrong,
                   width: isSelected ? 2.0 : 1.5,
                 ),
@@ -812,8 +813,8 @@ class _PaymentMethodCard extends StatelessWidget {
                       child: Container(
                         width: 10,
                         height: 10,
-                        decoration: const BoxDecoration(
-                          color: AppColors.mintAccent,
+                        decoration: BoxDecoration(
+                          color: context.brand.link,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -919,8 +920,8 @@ class _ConfirmingPaymentView extends ConsumerWidget {
               height: 56,
               child: CircularProgressIndicator(
                 strokeWidth: 3.5,
-                color: AppColors.mintAccent,
-                backgroundColor: AppColors.mintBackground,
+                color: context.brand.link,
+                backgroundColor: context.brand.tint,
               ),
             ),
           ),
@@ -1015,11 +1016,11 @@ class _MpesaPromptView extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 48),
-          const Center(
+          Center(
             child: Icon(
               Icons.phone_iphone_rounded,
               size: 44,
-              color: AppColors.mintAccent,
+              color: context.brand.link,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -1048,13 +1049,13 @@ class _MpesaPromptView extends ConsumerWidget {
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 250),
             child: !state.promptShown
-                ? const Center(
+                ? Center(
                     key: ValueKey('mpesa_prompt_sending'),
                     child: Padding(
                       padding: EdgeInsets.all(AppSpacing.lg),
                       child: CircularProgressIndicator(
-                        color: AppColors.mintAccent,
-                        backgroundColor: AppColors.mintBackground,
+                        color: context.brand.link,
+                        backgroundColor: context.brand.tint,
                       ),
                     ),
                   )
@@ -1348,8 +1349,8 @@ class _PaymentReceivedView extends ConsumerWidget {
             child: ElevatedButton(
               onPressed: notifier.finishPayRent,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.mintAccent,
-                foregroundColor: AppColors.pureWhite,
+                backgroundColor: context.brand.button,
+                foregroundColor: context.brand.onButton,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -1360,7 +1361,7 @@ class _PaymentReceivedView extends ConsumerWidget {
                 style: AppTypography.sans(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.pureWhite,
+                  color: context.brand.onButton,
                 ),
               ),
             ),

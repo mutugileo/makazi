@@ -27,14 +27,49 @@ Future<void> _signInAndCreatePin(
 }) async {
   final auth = c.read(authProvider.notifier);
   await auth.signIn(phone: _demo.phone, password: _demo.password);
-  await auth.changePassword(
-    newPassword: 'mvua ya asubuhi',
-    confirmation: 'mvua ya asubuhi',
-  );
-  auth.createPin(pin: pin, confirmation: pin);
+  await auth.createPin(pin: pin, confirmation: pin);
 }
 
 void main() {
+  group('manager PIN', () {
+    test(
+      'a temporary PIN must be replaced, and the new PIN signs in later',
+      () async {
+        final repo = _ManagerPinRepository(managerPin: '4826');
+        final c = _managerPinContainer(repo);
+        final auth = c.read(authProvider.notifier);
+
+        await auth.signIn(phone: '0733605118', password: '4826');
+        expect(c.read(authProvider).stage, AuthStage.createPin);
+
+        await auth.createPin(pin: '2580', confirmation: '2580');
+        expect(c.read(authProvider).stage, isNot(AuthStage.createPin));
+        expect(repo.isCurrentUserTemporary, isFalse);
+
+        // Lost session or a new phone: the PIN alone gets back in.
+        await auth.signOut();
+        await auth.signIn(phone: '0733605118', password: '4826');
+        expect(c.read(authProvider).errorText, contains("don't match"));
+        await auth.signIn(phone: '0733605118', password: '2580');
+        expect(c.read(authProvider).stage, AuthStage.unlocked);
+      },
+    );
+
+    test('a PIN that fails to save stays on Create a PIN', () async {
+      final repo = _ManagerPinRepository(managerPin: '4826')..failSave = true;
+      final c = _managerPinContainer(repo);
+      final auth = c.read(authProvider.notifier);
+
+      await auth.signIn(phone: '0733605118', password: '4826');
+      await auth.createPin(pin: '2580', confirmation: '2580');
+
+      final state = c.read(authProvider);
+      expect(state.stage, AuthStage.createPin);
+      expect(state.isBusy, isFalse);
+      expect(state.errorText, contains("Couldn't save your PIN"));
+    });
+  });
+
   group('normalizeKenyanPhone', () {
     test('accepts local and international formats', () {
       expect(normalizeKenyanPhone('0733 605 118'), '+254733605118');
@@ -77,67 +112,45 @@ void main() {
       expect(c.read(authProvider).errorText, wrongPassword);
     });
 
-    test('a temporary password must be changed before anything else', () async {
+    test('a temporary password goes straight to Create a PIN', () async {
       final c = _container();
       await c
           .read(authProvider.notifier)
           .signIn(phone: _demo.phone, password: _demo.password);
 
-      expect(c.read(authProvider).stage, AuthStage.mustChangePassword);
+      expect(c.read(authProvider).stage, AuthStage.createPin);
       expect(c.read(authProvider).phone, '+254733605118');
     });
 
-    test('rejects short, mismatched or phone-number passwords', () async {
-      final c = _container();
-      final auth = c.read(authProvider.notifier);
-      await auth.signIn(phone: _demo.phone, password: _demo.password);
-
-      await auth.changePassword(newPassword: 'short', confirmation: 'short');
-      expect(c.read(authProvider).errorText, contains('at least'));
-
-      await auth.changePassword(
-        newPassword: 'pass733605118',
-        confirmation: 'pass733605118',
-      );
-      expect(c.read(authProvider).errorText, contains('phone number'));
-
-      await auth.changePassword(
-        newPassword: 'long enough one',
-        confirmation: 'long enough two',
-      );
-      expect(c.read(authProvider).errorText, contains("don't match"));
-      expect(c.read(authProvider).stage, AuthStage.mustChangePassword);
-    });
-
-    test('new password, then PIN, then unlocked', () async {
+    test('temporary password, then PIN, then unlocked', () async {
       final c = _container();
       await _signInAndCreatePin(c);
       expect(c.read(authProvider).stage, AuthStage.unlocked);
     });
 
-    test('the old temporary password stops working', () async {
-      final c = _container();
-      await _signInAndCreatePin(c);
-      final auth = c.read(authProvider.notifier);
-      await auth.signOut();
+    test(
+      'the chosen PIN becomes the password; older ones stop working',
+      () async {
+        final c = _container();
+        await _signInAndCreatePin(c);
+        final auth = c.read(authProvider.notifier);
+        await auth.signOut();
 
-      await auth.signIn(phone: _demo.phone, password: _demo.password);
-      expect(c.read(authProvider).stage, AuthStage.signedOut);
+        await auth.signIn(phone: _demo.phone, password: _demo.password);
+        expect(c.read(authProvider).stage, AuthStage.signedOut);
 
-      await auth.signIn(phone: _demo.phone, password: 'mvua ya asubuhi');
-      expect(c.read(authProvider).stage, AuthStage.createPin);
-    });
+        // Signing in again (new phone, lost session) needs only the PIN.
+        await auth.signIn(phone: _demo.phone, password: '2580');
+        expect(c.read(authProvider).stage, AuthStage.unlocked);
+      },
+    );
 
     test('mismatched PIN confirmation is rejected', () async {
       final c = _container();
       final auth = c.read(authProvider.notifier);
       await auth.signIn(phone: _demo.phone, password: _demo.password);
-      await auth.changePassword(
-        newPassword: 'mvua ya asubuhi',
-        confirmation: 'mvua ya asubuhi',
-      );
 
-      auth.createPin(pin: '2580', confirmation: '2581');
+      await auth.createPin(pin: '2580', confirmation: '2581');
       expect(c.read(authProvider).stage, AuthStage.createPin);
       expect(c.read(authProvider).errorText, contains("didn't match"));
     });
@@ -259,4 +272,52 @@ class _TestBiometrics implements BiometricUnlock {
 
   @override
   Future<bool> authenticate(String reason) async => shouldAuthenticate;
+}
+
+/// Behaves like Supabase for one tenant: a manager-issued PIN is temporary
+/// until the tenant saves their own, which replaces it as the password.
+class _ManagerPinRepository implements AuthRepository {
+  _ManagerPinRepository({required String managerPin}) : _password = managerPin;
+
+  String _password;
+  bool _temporary = true;
+  bool _signedIn = false;
+  bool failSave = false;
+
+  @override
+  Future<SignInOutcome> signIn({
+    required String phone,
+    required String password,
+  }) async {
+    if (password != _password) return SignInOutcome.invalidCredentials;
+    _signedIn = true;
+    return SignInOutcome.success;
+  }
+
+  @override
+  Future<void> changePassword({required String newPassword}) async {
+    if (failSave) throw Exception('offline');
+    _password = newPassword;
+    _temporary = false;
+  }
+
+  @override
+  Future<void> signOut() async => _signedIn = false;
+
+  @override
+  String? get currentUserId => _signedIn ? 'tenant-1' : null;
+
+  @override
+  bool get isCurrentUserTemporary => _signedIn && _temporary;
+
+  @override
+  Stream<void> get sessionEnded => const Stream.empty();
+}
+
+ProviderContainer _managerPinContainer(_ManagerPinRepository repo) {
+  final container = ProviderContainer(
+    overrides: [authRepositoryProvider.overrideWithValue(repo)],
+  );
+  addTearDown(container.dispose);
+  return container;
 }

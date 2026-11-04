@@ -7,7 +7,6 @@ import '../../../billing/presentation/widgets/tenant_data_gate.dart';
 import '../../../shell/presentation/screens/app_shell_screen.dart';
 import '../../domain/auth_models.dart';
 import '../state/auth_providers.dart';
-import 'change_password_screen.dart';
 import 'create_pin_screen.dart';
 import 'enable_biometrics_screen.dart';
 import 'sign_in_screen.dart';
@@ -58,9 +57,7 @@ class _AuthGateState extends ConsumerState<AuthGate>
         Theme.of(context).extension<AppMotionThemeExtension>() ??
         const AppMotionThemeExtension.regular();
 
-    if (ref.watch(liveDataProvider) &&
-        stage != AuthStage.signedOut &&
-        stage != AuthStage.mustChangePassword) {
+    if (ref.watch(liveDataProvider) && stage != AuthStage.signedOut) {
       ref.listen(liveTenantSeedProvider, (_, _) {});
     }
 
@@ -70,9 +67,6 @@ class _AuthGateState extends ConsumerState<AuthGate>
       switchOutCurve: motion.standardEasing,
       child: switch (stage) {
         AuthStage.signedOut => const SignInScreen(key: ValueKey('sign_in')),
-        AuthStage.mustChangePassword => const ChangePasswordScreen(
-          key: ValueKey('change_password'),
-        ),
         AuthStage.createPin => const CreatePinScreen(
           key: ValueKey('create_pin'),
         ),

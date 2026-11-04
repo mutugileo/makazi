@@ -3,11 +3,9 @@ enum AuthStage {
   /// No session: phone number + password.
   signedOut,
 
-  /// Signed in with a temporary password from the property manager; must
-  /// choose their own before seeing any data.
-  mustChangePassword,
-
-  /// Signed in on this phone for the first time; choose an app PIN.
+  /// Signed in on this phone for the first time, or with a temporary PIN or
+  /// password from the property manager; choose an app PIN. The PIN is also
+  /// the account's password from then on.
   createPin,
 
   /// PIN chosen; offer fingerprint / Face ID if the phone has it.
@@ -23,7 +21,6 @@ enum AuthStage {
 
 enum SignInOutcome {
   success,
-  mustChangePassword,
   invalidCredentials,
 
   /// The manager's one-time password is past its 72 hours.
@@ -33,15 +30,8 @@ enum SignInOutcome {
   networkError,
 }
 
-/// The new password was saved but the server didn't accept it as replacing
-/// the one-time password (it expired meanwhile).
-class OneTimePasswordExpired implements Exception {
-  const OneTimePasswordExpired();
-}
-
 const int kPinLength = 4;
 const int kMaxPinAttempts = 5;
-const int kMinPasswordLength = 8;
 
 /// Lock the app when it has been in the background this long.
 const Duration kAutoLockAfter = Duration(minutes: 1);
@@ -61,24 +51,6 @@ String? normalizeKenyanPhone(String input) {
     return null;
   }
   return '+254$local';
-}
-
-/// Why a new password can't be used, or null if it can.
-String? passwordProblem(String password, {required String phone}) {
-  if (password.length < kMinPasswordLength) {
-    return 'Use at least $kMinPasswordLength characters';
-  }
-  final phoneDigits = phone.replaceAll(RegExp(r'[^0-9]'), '');
-  final localDigits = phoneDigits.length >= 9
-      ? phoneDigits.substring(phoneDigits.length - 9)
-      : phoneDigits;
-  if (localDigits.isNotEmpty && password.contains(localDigits)) {
-    return "Don't use your phone number in your password";
-  }
-  if (RegExp(r'^(.)\1+$').hasMatch(password)) {
-    return 'Choose a password that is harder to guess';
-  }
-  return null;
 }
 
 /// Why a PIN is too easy to guess, or null if it's fine.

@@ -27,9 +27,9 @@ const Map<String, String> kTenantSeedsByPhone = {
         "recordRetentionMonths": 6,
         "theme": {
           "preset": "blue",
-          "primary": "#0A2540",
-          "navBg": "#081B2E",
-          "accent": "#38BDF8"
+          "primary": "#0D382B",
+          "navBg": "#0A261F",
+          "accent": "#C6EE58"
         }
       },
       "sequences": {
@@ -248,9 +248,9 @@ const Map<String, String> kTenantSeedsByPhone = {
         "recordRetentionMonths": 12,
         "theme": {
           "preset": "blue",
-          "primary": "#0A2540",
-          "navBg": "#081B2E",
-          "accent": "#38BDF8"
+          "primary": "#0D382B",
+          "navBg": "#0A261F",
+          "accent": "#C6EE58"
         }
       },
       "sequences": {
@@ -443,9 +443,9 @@ const Map<String, String> kTenantSeedsByPhone = {
         "recordRetentionMonths": 6,
         "theme": {
           "preset": "blue",
-          "primary": "#0A2540",
-          "navBg": "#081B2E",
-          "accent": "#38BDF8"
+          "primary": "#0D382B",
+          "navBg": "#0A261F",
+          "accent": "#C6EE58"
         }
       },
       "sequences": {

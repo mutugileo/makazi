@@ -1,3 +1,4 @@
+import 'package:prop_mgt_app/core/theme/brand_colors.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/billing/billing_engine.dart';
 import '../../../../core/billing/billing_models.dart';
@@ -134,10 +135,10 @@ class BillDetailView extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.water_drop_outlined,
                     size: 20,
-                    color: AppColors.mintAccent,
+                    color: context.brand.link,
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(

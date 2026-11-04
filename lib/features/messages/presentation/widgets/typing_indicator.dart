@@ -1,3 +1,4 @@
+import 'package:prop_mgt_app/core/theme/brand_colors.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_motion.dart';
@@ -121,8 +122,8 @@ class _BouncingDot extends StatelessWidget {
           child: Container(
             width: 7,
             height: 7,
-            decoration: const BoxDecoration(
-              color: AppColors.forestGreenLight,
+            decoration: BoxDecoration(
+              color: context.brand.ink,
               shape: BoxShape.circle,
             ),
           ),

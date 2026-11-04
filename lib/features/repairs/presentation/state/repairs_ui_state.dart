@@ -9,6 +9,7 @@ class RepairsUiState {
     this.selectedCategory = RepairCategory.plumbing,
     this.description = '',
     this.attachedPhotoCount = 0,
+    this.attachedPhotoPath,
     this.isSubmitting = false,
     this.newlyCreatedTicket,
     this.submitError,
@@ -19,6 +20,7 @@ class RepairsUiState {
       selectedCategory = RepairCategory.plumbing,
       description = '',
       attachedPhotoCount = 0,
+      attachedPhotoPath = null,
       isSubmitting = false,
       newlyCreatedTicket = null,
       submitError = null;
@@ -28,11 +30,14 @@ class RepairsUiState {
   final RepairCategory? selectedCategory;
   final String description;
   final int attachedPhotoCount;
+  final String? attachedPhotoPath;
   final bool isSubmitting;
   final RepairTicket? newlyCreatedTicket;
 
   /// Set when the request couldn't be saved; the form stays open.
   final String? submitError;
+
+  bool get hasPhoto => attachedPhotoPath != null || attachedPhotoCount > 0;
 
   bool get canSubmit =>
       selectedCategory != null &&
@@ -45,6 +50,7 @@ class RepairsUiState {
     ValueGetter<RepairCategory?>? selectedCategory,
     String? description,
     int? attachedPhotoCount,
+    ValueGetter<String?>? attachedPhotoPath,
     bool? isSubmitting,
     ValueGetter<RepairTicket?>? newlyCreatedTicket,
     ValueGetter<String?>? submitError,
@@ -57,6 +63,9 @@ class RepairsUiState {
           : this.selectedCategory,
       description: description ?? this.description,
       attachedPhotoCount: attachedPhotoCount ?? this.attachedPhotoCount,
+      attachedPhotoPath: attachedPhotoPath != null
+          ? attachedPhotoPath()
+          : this.attachedPhotoPath,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       newlyCreatedTicket: newlyCreatedTicket != null
           ? newlyCreatedTicket()
@@ -74,6 +83,7 @@ class RepairsUiState {
         other.selectedCategory == selectedCategory &&
         other.description == description &&
         other.attachedPhotoCount == attachedPhotoCount &&
+        other.attachedPhotoPath == attachedPhotoPath &&
         other.isSubmitting == isSubmitting &&
         other.newlyCreatedTicket == newlyCreatedTicket &&
         other.submitError == submitError;
@@ -86,6 +96,7 @@ class RepairsUiState {
     selectedCategory,
     description,
     attachedPhotoCount,
+    attachedPhotoPath,
     isSubmitting,
     newlyCreatedTicket,
     submitError,

@@ -1,10 +1,14 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:prop_mgt_app/core/theme/brand_colors.dart';
 import 'package:flutter/material.dart';
+import '../../features/billing/presentation/state/tenant_account_providers.dart';
 import '../models/payment_receipt.dart';
+import '../services/pdf_document_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 
-class ReceiptDetailView extends StatelessWidget {
+class ReceiptDetailView extends ConsumerWidget {
   const ReceiptDetailView({
     super.key,
     required this.receipt,
@@ -15,7 +19,7 @@ class ReceiptDetailView extends StatelessWidget {
   final VoidCallback onBackPressed;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
@@ -74,8 +78,8 @@ class ReceiptDetailView extends StatelessWidget {
                 Container(
                   width: 50,
                   height: 50,
-                  decoration: const BoxDecoration(
-                    color: AppColors.forestGreen,
+                  decoration: BoxDecoration(
+                    color: context.brand.ink,
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -160,29 +164,57 @@ class ReceiptDetailView extends StatelessWidget {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'PDF receipts not available yet. '
-                      'They arrive with the database.',
-                      style: AppTypography.sans(
-                        fontSize: 14,
-                        color: AppColors.pureWhite,
+              onPressed: () async {
+                final company = ref.read(tenantAccountProvider).company;
+                try {
+                  await PdfDocumentService.downloadReceipt(
+                    receipt: receipt,
+                    company: company,
+                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Receipt PDF ready',
+                          style: AppTypography.sans(
+                            fontSize: 14,
+                            color: AppColors.pureWhite,
+                          ),
+                        ),
+                        backgroundColor: context.brand.ink,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        duration: const Duration(seconds: 2),
                       ),
-                    ),
-                    backgroundColor: AppColors.forestGreen,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
+                    );
+                  }
+                } catch (_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Unable to generate PDF receipt',
+                          style: AppTypography.sans(
+                            fontSize: 14,
+                            color: AppColors.pureWhite,
+                          ),
+                        ),
+                        backgroundColor: context.brand.ink,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.mintAccent,
-                foregroundColor: AppColors.pureWhite,
+                backgroundColor: context.brand.button,
+                foregroundColor: context.brand.onButton,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -193,7 +225,7 @@ class ReceiptDetailView extends StatelessWidget {
                 style: AppTypography.sans(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.pureWhite,
+                  color: context.brand.onButton,
                 ),
               ),
             ),

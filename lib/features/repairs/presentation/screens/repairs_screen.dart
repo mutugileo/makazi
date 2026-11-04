@@ -1,3 +1,4 @@
+import 'package:prop_mgt_app/core/theme/brand_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -37,7 +38,7 @@ class RepairsScreen extends ConsumerWidget {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            backgroundColor: AppColors.forestGreen,
+            backgroundColor: context.brand.primary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -135,8 +136,8 @@ class _RepairsListView extends StatelessWidget {
                 ElevatedButton(
                   onPressed: onNewRequestPressed,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.forestGreen,
-                    foregroundColor: AppColors.pureWhite,
+                    backgroundColor: context.brand.button,
+                    foregroundColor: context.brand.onButton,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.md,
@@ -151,7 +152,7 @@ class _RepairsListView extends StatelessWidget {
                     style: AppTypography.sans(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.pureWhite,
+                      color: context.brand.onButton,
                     ),
                   ),
                 ),
@@ -294,14 +295,14 @@ class _VisitPanel extends StatelessWidget {
           Container(
             width: 36,
             height: 36,
-            decoration: const BoxDecoration(
-              color: AppColors.mintBackground,
+            decoration: BoxDecoration(
+              color: context.brand.tint,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.handyman_outlined,
               size: 18,
-              color: AppColors.mintAccent,
+              color: context.brand.link,
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
@@ -345,7 +346,7 @@ class _VisitPanel extends StatelessWidget {
               button: true,
               label: 'Call ${visit.name}',
               child: Material(
-                color: AppColors.mintAccent,
+                color: context.brand.link,
                 shape: const CircleBorder(),
                 child: InkWell(
                   key: const ValueKey('repair_visit_call'),

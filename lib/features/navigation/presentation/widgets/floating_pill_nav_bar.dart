@@ -86,7 +86,7 @@ class _NavBarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveActive = activeColor ?? const Color(0xFF0A2540);
+    final effectiveActive = activeColor ?? const Color(0xFF0D382B);
     final selectedTextColor = effectiveActive.computeLuminance() > 0.45
         ? const Color(0xFF071A2C)
         : AppColors.pureWhite;

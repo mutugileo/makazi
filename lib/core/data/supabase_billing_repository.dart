@@ -344,9 +344,13 @@ class SupabaseBillingRepository {
   /// M-Pesa test mode: records a simulated payment for the tenant's own
   /// current tenancy (simulate_mpesa_payment). The database refuses unless
   /// the company has test mode on. Returns the receipt number.
-  Future<String> simulateMpesaPayment(int amount) async {
+  Future<String> simulateMpesaPayment(int amount, {String? tenancyId}) async {
+    final params = <String, dynamic>{
+      'p_amount': amount,
+      if (tenancyId != null && tenancyId.isNotEmpty) 'p_tenancy_id': tenancyId,
+    };
     final result = await _sb
-        .rpc('simulate_mpesa_payment', params: {'p_amount': amount})
+        .rpc('simulate_mpesa_payment', params: params)
         .timeout(const Duration(seconds: 15));
     return ((result as Map)['receiptNumber']) as String;
   }

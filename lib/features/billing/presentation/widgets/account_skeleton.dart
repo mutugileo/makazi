@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import 'package:prop_mgt_app/core/theme/brand_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/shimmer.dart';
 
@@ -52,10 +53,20 @@ class AccountSkeleton extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 decoration: BoxDecoration(
-                  color: AppColors.forestGreen,
+                  color: context.brand.primary,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
                 ),
-                child: const Shimmer.onDark(
+                child: Shimmer.onDark(
+                  baseColor: Color.lerp(
+                    context.brand.primary,
+                    Colors.white,
+                    0.08,
+                  )!,
+                  highlightColor: Color.lerp(
+                    context.brand.primary,
+                    Colors.white,
+                    0.16,
+                  )!,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

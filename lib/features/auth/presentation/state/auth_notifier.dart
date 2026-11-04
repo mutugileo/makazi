@@ -34,6 +34,8 @@ class AuthNotifier extends Notifier<AuthState> {
         stage: initialStage!,
         phone: initialPhone ?? restored.phone,
         firstName: initialFirstName ?? restored.firstName,
+        biometricLabel: restored.biometricLabel,
+        biometricsEnabled: restored.biometricsEnabled,
       );
     }
 
@@ -42,9 +44,8 @@ class AuthNotifier extends Notifier<AuthState> {
         stage: AuthStage.locked,
         phone: restored.phone,
         firstName: restored.firstName,
-        biometricLabel: restored.biometricsEnabled
-            ? restored.biometricLabel
-            : null,
+        biometricLabel: restored.biometricLabel,
+        biometricsEnabled: restored.biometricsEnabled,
         failedPinAttempts: restored.failedAttempts,
         isTemporaryPin: restored.isTemporary,
       );
@@ -77,7 +78,9 @@ class AuthNotifier extends Notifier<AuthState> {
 
     if (outcome == SignInOutcome.success) {
       final isTemporary = _repository.isCurrentUserTemporary;
-      if (password.trim().length == 4) {
+      // The tenant's own PIN (already their password): straight in. A PIN
+      // from the manager is temporary, so they choose their own first.
+      if (password.trim().length == 4 && !isTemporary) {
         final pin = password.trim();
         _pin = pin;
         final userId = _repository.currentUserId ?? 'user-$normalized';
@@ -120,52 +123,8 @@ class AuthNotifier extends Notifier<AuthState> {
         errorText: () =>
             'Couldn\'t reach Makazi. Check your connection and try again.',
       ),
-      SignInOutcome.mustChangePassword => AuthState(
-        stage: AuthStage.mustChangePassword,
-        phone: normalized,
-      ),
       SignInOutcome.success => state,
     };
-  }
-
-  Future<void> changePassword({
-    required String newPassword,
-    required String confirmation,
-  }) async {
-    if (state.isBusy || state.stage != AuthStage.mustChangePassword) return;
-    final problem = passwordProblem(newPassword, phone: state.phone ?? '');
-    if (problem != null) {
-      state = state.copyWith(errorText: () => problem);
-      return;
-    }
-    if (newPassword != confirmation) {
-      state = state.copyWith(errorText: () => 'The passwords don\'t match');
-      return;
-    }
-
-    state = state.copyWith(isBusy: true, errorText: () => null);
-    try {
-      await _repository.changePassword(newPassword: newPassword);
-    } on OneTimePasswordExpired {
-      if (!ref.mounted) return;
-      _endSession(
-        'That one-time password has expired. Ask your property manager for a new one.',
-      );
-      return;
-    } catch (e) {
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        isBusy: false,
-        errorText: () => 'Could not save password. Please try again.',
-      );
-      return;
-    }
-    if (!ref.mounted) return;
-    state = AuthState(
-      stage: AuthStage.createPin,
-      phone: state.phone,
-      firstName: state.firstName,
-    );
   }
 
   /// Returns false (with errorText set) when the PIN is too easy to guess.
@@ -175,8 +134,11 @@ class AuthNotifier extends Notifier<AuthState> {
     return problem == null;
   }
 
-  void createPin({required String pin, required String confirmation}) {
-    if (state.stage != AuthStage.createPin) return;
+  Future<void> createPin({
+    required String pin,
+    required String confirmation,
+  }) async {
+    if (state.stage != AuthStage.createPin || state.isBusy) return;
     if (!checkNewPin(pin)) return;
     if (pin != confirmation) {
       state = state.copyWith(
@@ -184,6 +146,23 @@ class AuthNotifier extends Notifier<AuthState> {
       );
       return;
     }
+
+    // The PIN is the account's password from now on, so signing in again
+    // (new phone, expired session) works with the same four digits. Saving
+    // it also clears the manager's temporary PIN and its 72-hour expiry.
+    state = state.copyWith(isBusy: true, errorText: () => null);
+    try {
+      await _repository.changePassword(newPassword: pin);
+    } catch (_) {
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        isBusy: false,
+        errorText: () =>
+            'Couldn\'t save your PIN. Check your connection and try again.',
+      );
+      return;
+    }
+    if (!ref.mounted) return;
 
     _pin = pin;
     final phone = state.phone ?? '';
@@ -266,6 +245,7 @@ class AuthNotifier extends Notifier<AuthState> {
     if (bioLabel != null) {
       state = state.copyWith(
         stage: AuthStage.enableBiometrics,
+        isBusy: false,
         firstName: firstName,
         biometricLabel: () => bioLabel,
         errorText: () => null,
@@ -293,6 +273,8 @@ class AuthNotifier extends Notifier<AuthState> {
       stage: AuthStage.unlocked,
       phone: state.phone,
       firstName: state.firstName,
+      biometricLabel: state.biometricLabel,
+      biometricsEnabled: ok,
       isTemporaryPin: state.isTemporaryPin,
     );
   }
@@ -305,8 +287,33 @@ class AuthNotifier extends Notifier<AuthState> {
       stage: AuthStage.unlocked,
       phone: state.phone,
       firstName: state.firstName,
+      biometricLabel: state.biometricLabel,
+      biometricsEnabled: false,
       isTemporaryPin: state.isTemporaryPin,
     );
+  }
+
+  Future<bool> toggleBiometrics(bool enable) async {
+    if (enable) {
+      final label =
+          state.biometricLabel ??
+          await _biometrics.availableLabel() ??
+          'biometrics';
+      final ok = await _biometrics.authenticate('Enable $label for Makazi');
+      if (ok) {
+        await _updateBiometricsEnabled(true);
+        state = state.copyWith(
+          biometricsEnabled: true,
+          biometricLabel: () => label,
+        );
+        return true;
+      }
+      return false;
+    } else {
+      await _updateBiometricsEnabled(false);
+      state = state.copyWith(biometricsEnabled: false);
+      return true;
+    }
   }
 
   Future<void> _updateBiometricsEnabled(bool enabled) async {
@@ -373,6 +380,7 @@ class AuthNotifier extends Notifier<AuthState> {
     final ok = await _biometrics.authenticate('Unlock Makazi with $label');
     if (!ref.mounted) return;
     if (ok) {
+      await _updateBiometricsEnabled(true);
       if (_cachedLock != null && _cachedLock!.failedAttempts > 0) {
         final resetLock = _cachedLock!.copyWith(failedAttempts: 0);
         _cachedLock = resetLock;
@@ -383,6 +391,8 @@ class AuthNotifier extends Notifier<AuthState> {
         phone: state.phone ?? _cachedLock?.phone,
         firstName: state.firstName ?? _cachedLock?.firstName,
         isTemporaryPin: _cachedLock?.isTemporary ?? state.isTemporaryPin,
+        biometricLabel: state.biometricLabel,
+        biometricsEnabled: true,
       );
     }
   }
@@ -395,6 +405,7 @@ class AuthNotifier extends Notifier<AuthState> {
       phone: state.phone,
       firstName: state.firstName,
       biometricLabel: state.biometricLabel,
+      biometricsEnabled: state.biometricsEnabled,
       isTemporaryPin: state.isTemporaryPin,
     );
   }

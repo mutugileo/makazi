@@ -28,6 +28,10 @@ class TenantNotification {
       kind == 'pin_reset' ||
       title.toLowerCase().contains('pin') ||
       body.toLowerCase().contains('pin');
+  bool get isMessage =>
+      kind == 'message' ||
+      title.toLowerCase().contains('message') ||
+      title.toLowerCase().contains('makazi');
   bool get isPaymentReminder => kind == 'payment_reminder' && !isPinReset;
 
   DateTime? get createdDateTime => DateTime.tryParse(createdAt);

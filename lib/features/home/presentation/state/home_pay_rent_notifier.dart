@@ -107,11 +107,12 @@ class HomePayRentNotifier extends Notifier<HomePayRentUiState> {
     state = state.copyWith(step: PayRentStep.confirming, promptShown: false);
 
     if (ref.read(liveDataProvider)) {
+      final currentTenancyId = ref.read(tenantAccountProvider).tenancy.id;
       final String receiptNumber;
       try {
         receiptNumber = await ref
             .read(supabaseBillingRepositoryProvider)
-            .simulateMpesaPayment(amount);
+            .simulateMpesaPayment(amount, tenancyId: currentTenancyId);
       } catch (error) {
         if (!ref.mounted) return;
         state = state.copyWith(

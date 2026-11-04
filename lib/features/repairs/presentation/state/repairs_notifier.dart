@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/billing/billing_engine.dart';
 import '../../../../core/billing/billing_models.dart';
 import '../../../../core/data/data_mode.dart';
@@ -98,6 +101,7 @@ class RepairsNotifier extends Notifier<RepairsUiState> {
       selectedCategory: () => RepairCategory.plumbing,
       description: '',
       attachedPhotoCount: 0,
+      attachedPhotoPath: () => null,
       isSubmitting: false,
       newlyCreatedTicket: () => null,
       submitError: () => null,
@@ -110,6 +114,7 @@ class RepairsNotifier extends Notifier<RepairsUiState> {
       isNewRequestOpen: false,
       description: '',
       attachedPhotoCount: 0,
+      attachedPhotoPath: () => null,
       isSubmitting: false,
       newlyCreatedTicket: () => null,
       submitError: () => null,
@@ -125,9 +130,43 @@ class RepairsNotifier extends Notifier<RepairsUiState> {
     state = state.copyWith(description: text);
   }
 
+  void attachPhoto(String filePath) {
+    state = state.copyWith(
+      attachedPhotoPath: () => filePath,
+      attachedPhotoCount: 1,
+    );
+  }
+
+  void removePhoto() {
+    state = state.copyWith(
+      attachedPhotoPath: () => null,
+      attachedPhotoCount: 0,
+    );
+  }
+
   void togglePhotoAttachment() {
-    final nextCount = state.attachedPhotoCount > 0 ? 0 : 1;
-    state = state.copyWith(attachedPhotoCount: nextCount);
+    if (state.hasPhoto) {
+      removePhoto();
+    } else {
+      state = state.copyWith(attachedPhotoCount: 1);
+    }
+  }
+
+  Future<void> pickPhoto(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+      if (picked != null) {
+        attachPhoto(picked.path);
+      }
+    } catch (_) {
+      // Permission denied or picker cancelled
+    }
   }
 
   /// Saves the request; the confirmation shows only once it is stored.
@@ -139,7 +178,8 @@ class RepairsNotifier extends Notifier<RepairsUiState> {
     final category = state.selectedCategory ?? RepairCategory.plumbing;
     final text = state.description.trim();
     final title = text.length > 50 ? '${text.substring(0, 47)}...' : text;
-    final hasPhoto = state.attachedPhotoCount > 0;
+    final hasPhoto = state.hasPhoto;
+    final photoPath = state.attachedPhotoPath;
 
     final RepairTicket newTicket;
     if (ref.read(liveDataProvider)) {
@@ -157,6 +197,25 @@ class RepairsNotifier extends Notifier<RepairsUiState> {
               hasPhoto: hasPhoto,
             );
         newTicket = repairTicketFromRecord(record);
+
+        if (photoPath != null) {
+          try {
+            final file = File(photoPath);
+            if (await file.exists()) {
+              final bytes = await file.readAsBytes();
+              final ext = photoPath.contains('.')
+                  ? photoPath.split('.').last
+                  : 'jpg';
+              final storagePath =
+                  '${account.company.id}/${account.tenancy.id}/${record.id}.$ext';
+              await Supabase.instance.client.storage
+                  .from('repair-photos')
+                  .uploadBinary(storagePath, bytes);
+            }
+          } catch (_) {
+            // Upload failure doesn't block ticket creation
+          }
+        }
       } catch (_) {
         if (!ref.mounted) return;
         state = state.copyWith(

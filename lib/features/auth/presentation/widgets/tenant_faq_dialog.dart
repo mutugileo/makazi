@@ -16,9 +16,9 @@ class FaqItem {
 const List<FaqItem> kTenantFaq = [
   FaqItem(
     'How do I sign in?',
-    'Use the phone number your property manager registered and the one-time '
-        'password they gave you. You will be asked to set your own password, '
-        'then create a PIN for quick unlock.',
+    'The first time, use the phone number your property manager registered '
+        'and the one-time password they gave you, then create your own '
+        '4-digit PIN. After that you only need your PIN.',
   ),
   FaqItem(
     'Can I unlock with my fingerprint or face?',

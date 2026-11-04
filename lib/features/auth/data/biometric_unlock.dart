@@ -22,9 +22,13 @@ class DeviceBiometricUnlock implements BiometricUnlock {
   Future<String?> availableLabel() async {
     if (kIsWeb) return null;
     try {
-      if (!await _auth.canCheckBiometrics) return null;
+      final isSupported = await _auth.isDeviceSupported();
+      final canCheck = await _auth.canCheckBiometrics;
+      if (!isSupported && !canCheck) return null;
+
       final enrolled = await _auth.getAvailableBiometrics();
-      if (enrolled.isEmpty) return null;
+      if (enrolled.isEmpty && !canCheck) return null;
+
       if (enrolled.contains(BiometricType.face)) {
         return defaultTargetPlatform == TargetPlatform.iOS
             ? 'Face ID'
@@ -46,6 +50,7 @@ class DeviceBiometricUnlock implements BiometricUnlock {
       return await _auth.authenticate(
         localizedReason: reason,
         biometricOnly: true,
+        persistAcrossBackgrounding: true,
       );
     } catch (_) {
       return false;

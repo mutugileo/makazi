@@ -26,6 +26,10 @@ import '../widgets/pay_rent_flow_view.dart';
 import '../widgets/recent_transactions_card.dart';
 import '../../../auth/presentation/state/auth_providers.dart';
 import '../../../auth/presentation/widgets/change_pin_sheet.dart';
+import '../../../shell/presentation/widgets/app_side_nav_drawer.dart';
+import '../../../app_update/presentation/state/app_update_providers.dart';
+import '../../../app_update/presentation/state/app_update_ui_state.dart';
+import '../../../app_update/presentation/widgets/app_update_sheet.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -37,6 +41,7 @@ class HomeScreen extends ConsumerWidget {
     final payRentNotifier = ref.read(homePayRentProvider.notifier);
     final account = ref.watch(tenantAccountProvider);
     final unreadCount = ref.watch(unreadNotificationsProvider).length;
+    final updateState = ref.watch(appUpdateProvider);
     final paymentsNotifier = ref.read(paymentsProvider.notifier);
     final theme = Theme.of(context);
     final motion =
@@ -45,6 +50,7 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
+      drawer: const AppSideNavDrawer(),
       body: SafeArea(
         bottom: false,
         child: AnimatedSwitcher(
@@ -70,6 +76,10 @@ class HomeScreen extends ConsumerWidget {
                   account: account,
                   unreadCount: unreadCount,
                   isTemporaryPin: ref.watch(authProvider).isTemporaryPin,
+                  updateState: updateState,
+                  onDismissUpdate: () => ref
+                      .read(appUpdateProvider.notifier)
+                      .dismissUpdateNotice(),
                   onRefresh: () async {
                     await ref
                         .read(tenantAccountProvider.notifier)
@@ -107,6 +117,8 @@ class _HomeDashboardView extends StatelessWidget {
     required this.account,
     required this.unreadCount,
     required this.isTemporaryPin,
+    required this.updateState,
+    required this.onDismissUpdate,
     required this.onRefresh,
     required this.onPayRentPressed,
     required this.onSeeAllPressed,
@@ -118,6 +130,8 @@ class _HomeDashboardView extends StatelessWidget {
   final TenantAccountState account;
   final int unreadCount;
   final bool isTemporaryPin;
+  final AppUpdateUiState updateState;
+  final VoidCallback onDismissUpdate;
   final Future<void> Function() onRefresh;
   final VoidCallback onPayRentPressed;
   final VoidCallback onSeeAllPressed;
@@ -155,33 +169,69 @@ class _HomeDashboardView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      Text(
-                        account.unitTitle,
-                        style: AppTypography.sans(
-                          fontSize: 13,
-                          color: AppColors.textMuted,
-                          fontWeight: FontWeight.w400,
+                      Builder(
+                        builder: (scaffoldContext) => Semantics(
+                          button: true,
+                          label: 'Navigation menu',
+                          child: GestureDetector(
+                            key: const ValueKey('home_side_nav_button'),
+                            onTap: () =>
+                                Scaffold.of(scaffoldContext).openDrawer(),
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: AppColors.cardBackground,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.borderLight,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.menu_rounded,
+                                color: AppColors.textPrimary,
+                                size: 22,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Habari, ${account.tenant.firstName}',
-                        style: AppTypography.editorialSerif(
-                          fontSize: 34,
-                          fontWeight: FontWeight.w400,
-                          color: AppColors.textPrimary,
-                          letterSpacing: -0.5,
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              account.unitTitle,
+                              style: AppTypography.sans(
+                                fontSize: 13,
+                                color: AppColors.textMuted,
+                                fontWeight: FontWeight.w400,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Habari, ${account.tenant.firstName}',
+                              style: AppTypography.editorialSerif(
+                                fontSize: 26,
+                                fontWeight: FontWeight.w400,
+                                color: AppColors.textPrimary,
+                                letterSpacing: -0.5,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: AppSpacing.sm),
+                const SizedBox(width: AppSpacing.xs),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -255,7 +305,7 @@ class _HomeDashboardView extends StatelessWidget {
                               style: AppTypography.sans(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.pureWhite,
+                                color: companyTheme.onPrimaryColor,
                               ),
                             ),
                           ),
@@ -267,6 +317,136 @@ class _HomeDashboardView extends StatelessWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.md),
+            if (updateState.isUpdateAvailable &&
+                !updateState.hasDismissedNotice) ...[
+              Container(
+                key: const ValueKey('home_update_banner'),
+                margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackground,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: companyTheme.primaryColor.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: companyTheme.primaryColor.withValues(
+                          alpha: 0.12,
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.system_update_rounded,
+                        color: companyTheme.primaryColor,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  'Update Available',
+                                  style: AppTypography.sans(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.mintBackground,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'v${updateState.updateInfo.latestVersion}',
+                                  style: AppTypography.sans(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.mintAccent,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Vacation notice & move-out inspection',
+                            style: AppTypography.sans(
+                              fontSize: 12,
+                              color: AppColors.textMuted,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    ElevatedButton(
+                      key: const ValueKey('home_update_banner_button'),
+                      onPressed: () => AppUpdateSheet.show(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: companyTheme.primaryColor,
+                        foregroundColor: companyTheme.onPrimaryColor,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        'Update',
+                        style: AppTypography.sans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: companyTheme.onPrimaryColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      key: const ValueKey('home_update_banner_dismiss'),
+                      tooltip: 'Dismiss update notice',
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        size: 18,
+                        color: AppColors.textMuted,
+                      ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 28,
+                        minHeight: 28,
+                      ),
+                      onPressed: onDismissUpdate,
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const NotificationCards(),
             if (isTemporaryPin) ...[
               Container(
@@ -328,7 +508,7 @@ class _HomeDashboardView extends StatelessWidget {
                           ChangePinSheet.show(context, isTemporaryPrompt: true),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: companyTheme.primaryColor,
-                        foregroundColor: AppColors.pureWhite,
+                        foregroundColor: companyTheme.onPrimaryColor,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 6,
@@ -345,7 +525,7 @@ class _HomeDashboardView extends StatelessWidget {
                         style: AppTypography.sans(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.pureWhite,
+                          color: companyTheme.onPrimaryColor,
                         ),
                       ),
                     ),

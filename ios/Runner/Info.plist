@@ -70,5 +70,9 @@
 	<array>
 		<string>tel</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Allow Makazi to take photos of repair issues.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Allow Makazi to choose photos of repair issues from your library.</string>
 </dict>
 </plist>

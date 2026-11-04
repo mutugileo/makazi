@@ -1,3 +1,4 @@
+import 'package:prop_mgt_app/core/theme/brand_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -10,6 +11,8 @@ import '../../domain/tenant_notification.dart';
 import '../state/notifications_providers.dart';
 
 import '../../../auth/presentation/widgets/change_pin_sheet.dart';
+import '../../../navigation/domain/models/app_tab.dart';
+import '../../../navigation/presentation/state/navigation_providers.dart';
 import '../screens/notifications_screen.dart';
 
 /// Unread notifications at the top of Home, newest first, until dismissed.
@@ -30,10 +33,10 @@ class NotificationCards extends ConsumerWidget {
           children: [
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.notifications_active_outlined,
                   size: 16,
-                  color: AppColors.forestGreen,
+                  color: context.brand.ink,
                 ),
                 const SizedBox(width: 6),
                 Text(
@@ -42,7 +45,7 @@ class NotificationCards extends ConsumerWidget {
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.8,
-                    color: AppColors.forestGreen,
+                    color: context.brand.ink,
                   ),
                 ),
               ],
@@ -65,7 +68,7 @@ class NotificationCards extends ConsumerWidget {
                 style: AppTypography.sans(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.forestGreen,
+                  color: context.brand.ink,
                 ),
               ),
             ),
@@ -114,22 +117,29 @@ class _NotificationCardState extends ConsumerState<_NotificationCard> {
   Widget build(BuildContext context) {
     final n = widget.notification;
     final isPinReset = n.isPinReset;
+    final isMessage = n.isMessage;
     final account = ref.watch(tenantAccountProvider);
     final canPay =
         n.isPaymentReminder && account.isActive && account.balance > 0;
 
-    final cardBg = isPinReset
+    final cardBg = (isPinReset || isMessage)
         ? AppColors.cardBackground
         : AppColors.terracottaLight;
 
     final borderColor = isPinReset
-        ? AppColors.forestGreen.withValues(alpha: 0.3)
+        ? context.brand.ink.withValues(alpha: 0.3)
+        : isMessage
+        ? context.brand.ink.withValues(alpha: 0.25)
         : AppColors.statusUnpaidBorder;
 
-    final iconColor = isPinReset ? AppColors.forestGreen : AppColors.terracotta;
+    final iconColor = (isPinReset || isMessage)
+        ? context.brand.ink
+        : AppColors.terracotta;
 
     final icon = isPinReset
         ? Icons.lock_reset_rounded
+        : isMessage
+        ? Icons.chat_bubble_outline_rounded
         : Icons.notifications_active_outlined;
 
     return Container(
@@ -223,6 +233,28 @@ class _NotificationCardState extends ConsumerState<_NotificationCard> {
                   ),
                 ),
               ),
+              if (isMessage) ...[
+                const SizedBox(width: AppSpacing.xs),
+                ElevatedButton.icon(
+                  key: ValueKey('notification_reply_home_${n.id}'),
+                  onPressed: () {
+                    _dismiss();
+                    ref
+                        .read(navigationProvider.notifier)
+                        .selectTab(AppTab.messages);
+                  },
+                  icon: const Icon(Icons.reply_rounded, size: 15),
+                  label: const Text('Reply'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: context.brand.button,
+                    foregroundColor: context.brand.onButton,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+              ],
               if (isPinReset) ...[
                 const SizedBox(width: AppSpacing.xs),
                 ElevatedButton.icon(
@@ -234,8 +266,8 @@ class _NotificationCardState extends ConsumerState<_NotificationCard> {
                   icon: const Icon(Icons.key_outlined, size: 15),
                   label: const Text('Change PIN'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.forestGreen,
-                    foregroundColor: AppColors.pureWhite,
+                    backgroundColor: context.brand.button,
+                    foregroundColor: context.brand.onButton,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -249,8 +281,8 @@ class _NotificationCardState extends ConsumerState<_NotificationCard> {
                   onPressed: () =>
                       ref.read(homePayRentProvider.notifier).openPayRent(),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.mintAccent,
-                    foregroundColor: AppColors.pureWhite,
+                    backgroundColor: context.brand.button,
+                    foregroundColor: context.brand.onButton,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),

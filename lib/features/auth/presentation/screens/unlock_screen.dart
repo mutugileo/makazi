@@ -23,7 +23,9 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final state = ref.read(authProvider);
-      if (!_promptedBiometrics && state.biometricLabel != null) {
+      if (!_promptedBiometrics &&
+          state.biometricsEnabled &&
+          state.biometricLabel != null) {
         _promptedBiometrics = true;
         ref.read(authProvider.notifier).unlockWithBiometrics();
       }

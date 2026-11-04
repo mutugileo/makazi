@@ -145,6 +145,10 @@ class MessagesNotifier extends Notifier<List<ChatMessage>> {
     ref.read(tenantRealtimeProvider)?.sendTyping(isTyping);
   }
 
+  void receiveIncomingMessage(ChatMessage message) {
+    state = [...state, message];
+  }
+
   void markConversationRead() {
     ref.read(tenantRealtimeProvider)?.sendReadReceipt();
   }

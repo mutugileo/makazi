@@ -1,3 +1,4 @@
+import 'package:prop_mgt_app/core/theme/brand_colors.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -69,8 +70,8 @@ class ActionNeededCard extends StatelessWidget {
               Container(
                 width: 42,
                 height: 42,
-                decoration: const BoxDecoration(
-                  color: AppColors.forestGreen,
+                decoration: BoxDecoration(
+                  color: context.brand.ink,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(

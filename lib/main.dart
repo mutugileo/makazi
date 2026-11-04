@@ -5,7 +5,9 @@ import 'app.dart';
 import 'core/config/supabase_config.dart';
 import 'core/data/secure_session_storage.dart';
 import 'features/auth/data/restore_device_session.dart';
+import 'core/theme/brand_theme_cache.dart';
 import 'features/auth/presentation/state/auth_providers.dart';
+import 'features/billing/presentation/state/tenant_account_providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,10 +30,14 @@ Future<void> main() async {
   }
 
   final restoredDevice = await restoreDeviceSession();
+  final cachedBrandTheme = await BrandThemeCache.read();
 
   runApp(
     ProviderScope(
-      overrides: [restoredDeviceProvider.overrideWithValue(restoredDevice)],
+      overrides: [
+        restoredDeviceProvider.overrideWithValue(restoredDevice),
+        cachedBrandThemeProvider.overrideWithValue(cachedBrandTheme),
+      ],
       child: const PropMgtApp(),
     ),
   );

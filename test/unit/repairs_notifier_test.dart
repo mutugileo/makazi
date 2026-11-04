@@ -62,6 +62,19 @@ void main() {
 
       notifier.togglePhotoAttachment();
       expect(container.read(repairsProvider).attachedPhotoCount, 0);
+
+      notifier.attachPhoto('/path/to/leak_photo.jpg');
+      expect(
+        container.read(repairsProvider).attachedPhotoPath,
+        '/path/to/leak_photo.jpg',
+      );
+      expect(container.read(repairsProvider).attachedPhotoCount, 1);
+      expect(container.read(repairsProvider).hasPhoto, isTrue);
+
+      notifier.removePhoto();
+      expect(container.read(repairsProvider).attachedPhotoPath, isNull);
+      expect(container.read(repairsProvider).attachedPhotoCount, 0);
+      expect(container.read(repairsProvider).hasPhoto, isFalse);
     });
 
     test('submitRequest prepends new ticket and closes request form', () async {

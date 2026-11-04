@@ -61,20 +61,24 @@ enum BillLineKind {
 @immutable
 class CompanyTheme {
   const CompanyTheme({
-    this.preset = 'blue',
-    this.primaryHex = '#0A2540',
-    this.navBgHex = '#081B2E',
-    this.accentHex = '#38BDF8',
+    this.preset = 'forest',
+    this.primaryHex = '#0D382B',
+    this.navBgHex = '#0A261F',
+    this.accentHex = '#C6EE58',
+    this.buttonHex,
+    this.progressHex,
     this.logoUrl,
   });
 
   factory CompanyTheme.fromJson(Map<String, dynamic>? json) {
     if (json == null) return const CompanyTheme();
     return CompanyTheme(
-      preset: json['preset'] as String? ?? 'blue',
-      primaryHex: json['primary'] as String? ?? '#0A2540',
-      navBgHex: json['navBg'] as String? ?? '#081B2E',
-      accentHex: json['accent'] as String? ?? '#38BDF8',
+      preset: json['preset'] as String? ?? 'forest',
+      primaryHex: json['primary'] as String? ?? '#0D382B',
+      navBgHex: json['navBg'] as String? ?? '#0A261F',
+      accentHex: json['accent'] as String? ?? '#C6EE58',
+      buttonHex: json['button'] as String?,
+      progressHex: json['progress'] as String?,
       logoUrl: json['logoUrl'] as String?,
     );
   }
@@ -83,26 +87,41 @@ class CompanyTheme {
   final String primaryHex;
   final String navBgHex;
   final String accentHex;
+
+  /// Main call-to-action buttons (Pay now, New request). Falls back to accent.
+  final String? buttonHex;
+
+  /// Rent progress bar fill. Falls back to accent.
+  final String? progressHex;
   final String? logoUrl;
 
-  Color get primaryColor => _parseHex(primaryHex, const Color(0xFF0A2540));
-  Color get navBgColor => _parseHex(navBgHex, const Color(0xFF081B2E));
-  Color get accentColor => _parseHex(accentHex, const Color(0xFF38BDF8));
+  Color get primaryColor => _parseHex(primaryHex, const Color(0xFF0D382B));
+  Color get navBgColor => _parseHex(navBgHex, const Color(0xFF0A261F));
+  Color get accentColor => _parseHex(accentHex, const Color(0xFFC6EE58));
+  Color get buttonColor =>
+      buttonHex == null ? accentColor : _parseHex(buttonHex!, accentColor);
+  Color get progressColor =>
+      progressHex == null ? accentColor : _parseHex(progressHex!, accentColor);
+
+  /// Text and icons on top of [buttonColor].
+  Color get onButtonColor => buttonColor.computeLuminance() > 0.35
+      ? const Color(0xFF071A2C)
+      : const Color(0xFFFFFFFF);
 
   /// Accessible text/icon color for elements rendered on top of [accentColor].
-  Color get onAccentColor => accentColor.computeLuminance() > 0.45
+  Color get onAccentColor => accentColor.computeLuminance() > 0.35
       ? (navBgColor.computeLuminance() < 0.2
             ? navBgColor
             : const Color(0xFF071A2C))
       : const Color(0xFFFFFFFF);
 
   /// Accessible text/icon color for elements rendered on top of [primaryColor].
-  Color get onPrimaryColor => primaryColor.computeLuminance() > 0.45
+  Color get onPrimaryColor => primaryColor.computeLuminance() > 0.35
       ? const Color(0xFF071A2C)
       : const Color(0xFFFFFFFF);
 
   /// Accessible text/icon color for elements rendered on top of [navBgColor].
-  Color get onNavBgColor => navBgColor.computeLuminance() > 0.45
+  Color get onNavBgColor => navBgColor.computeLuminance() > 0.35
       ? const Color(0xFF071A2C)
       : const Color(0xFFFFFFFF);
 
@@ -125,6 +144,8 @@ class CompanyTheme {
     'primary': primaryHex,
     'navBg': navBgHex,
     'accent': accentHex,
+    if (buttonHex != null) 'button': buttonHex,
+    if (progressHex != null) 'progress': progressHex,
     if (logoUrl != null) 'logoUrl': logoUrl,
   };
 }
