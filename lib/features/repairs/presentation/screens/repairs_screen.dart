@@ -391,6 +391,10 @@ class _RepairStatusBadge extends StatelessWidget {
         AppColors.statusCreditBackground,
         AppColors.statusCreditText,
       ),
+      RepairStatus.voided => (
+        AppColors.statusUnpaidBackground,
+        AppColors.statusUnpaidText,
+      ),
     };
 
     return Container(

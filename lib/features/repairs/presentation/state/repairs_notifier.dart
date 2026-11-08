@@ -23,6 +23,7 @@ RepairTicket repairTicketFromRecord(RepairTicketRecord record) {
     // Who's going and when show in their own panel on the card.
     RepairStatus.inProgress => 'Submitted $created · In progress',
     RepairStatus.open => 'Submitted $created · Open',
+    RepairStatus.voided => 'Closed · Deemed irrelevant / voided',
   };
   final assignee = record.assignedTo;
   return RepairTicket(
@@ -211,6 +212,10 @@ class RepairsNotifier extends Notifier<RepairsUiState> {
               await Supabase.instance.client.storage
                   .from('repair-photos')
                   .uploadBinary(storagePath, bytes);
+              await Supabase.instance.client.rpc(
+                'set_repair_ticket_photo',
+                params: {'p_ticket_id': record.id, 'p_path': storagePath},
+              );
             }
           } catch (_) {
             // Upload failure doesn't block ticket creation

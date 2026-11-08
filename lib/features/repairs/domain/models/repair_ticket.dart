@@ -18,18 +18,19 @@ enum RepairCategory {
       values.firstWhere((c) => c.wire == value);
 }
 
-// Same three columns as the admin's maintenance board.
+// Same three columns as the admin's maintenance board, plus voided for irrelevant tickets.
 enum RepairStatus {
   open('open', 'Open'),
   inProgress('in_progress', 'In progress'),
-  resolved('resolved', 'Resolved');
+  resolved('resolved', 'Resolved'),
+  voided('voided', 'Voided');
 
   const RepairStatus(this.wire, this.label);
   final String wire;
   final String label;
 
   static RepairStatus fromWire(String value) =>
-      values.firstWhere((s) => s.wire == value);
+      values.firstWhere((c) => c.wire == value);
 }
 
 /// Set by staff when triaging. Tenants don't choose it; new requests start
