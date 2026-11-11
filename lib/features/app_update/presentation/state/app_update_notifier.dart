@@ -8,8 +8,8 @@ import 'app_update_ui_state.dart';
 class AppUpdateNotifier extends Notifier<AppUpdateUiState> {
   /// The newest release published on Google Play. Bump these with each
   /// release. The installed version is read from the app itself, at runtime.
-  static const String latestAppVersion = '1.0.7';
-  static const int latestAppBuildNumber = 7;
+  static const String latestAppVersion = '1.0.8';
+  static const int latestAppBuildNumber = 8;
 
   static const List<String> latestReleaseNotes = [
     'In-app notification pop-up for messages with tactile feedback',

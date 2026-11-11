@@ -29,8 +29,6 @@ class BillBreakdown extends StatelessWidget {
             label: _lineLabel(line),
             detail: line.kind == BillLineKind.water && bill.water != null
                 ? '${bill.water!.units} units × ${formatKes(bill.water!.rate)}'
-                : line.kind == BillLineKind.rent && bill.rentDays != null
-                ? '${bill.rentDays!.days} of ${bill.rentDays!.of} days'
                 : null,
             value: formatKes(line.amount),
           ),

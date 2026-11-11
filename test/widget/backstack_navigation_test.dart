@@ -72,7 +72,9 @@ void main() {
       expect(find.text('Habari, David'), findsOneWidget);
     });
 
-    testWidgets('system back in Home closes Pay Rent flow', (tester) async {
+    testWidgets('system back in Home closes the Pay rent sheet', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(390 * 2, 844 * 2);
       tester.view.devicePixelRatio = 2.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -84,7 +86,7 @@ void main() {
       // Open Pay Rent
       await tester.tap(find.text('Pay rent'));
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('pay_rent_flow_view')), findsOneWidget);
+      expect(find.byKey(const ValueKey('pay_rent_details')), findsOneWidget);
 
       // System back closes Pay Rent
       final navigator = Navigator.of(
@@ -94,7 +96,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Habari, David'), findsOneWidget);
-      expect(find.byKey(const ValueKey('pay_rent_flow_view')), findsNothing);
+      expect(find.byKey(const ValueKey('pay_rent_details')), findsNothing);
+      // Closing resets it, so it can open again.
+      await tester.tap(find.text('Pay rent'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('pay_rent_details')), findsOneWidget);
     });
 
     testWidgets('system back in Repairs closes New Request form', (

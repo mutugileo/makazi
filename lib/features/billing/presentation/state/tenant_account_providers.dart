@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/billing/billing_models.dart';
+import '../../../../core/billing/payment_claim.dart';
 import '../../../../core/theme/brand_colors.dart';
 import '../../../../core/theme/brand_theme_cache.dart';
 import '../../../../core/data/data_mode.dart';
@@ -82,6 +83,19 @@ final tenantRealtimeProvider = Provider<TenantRealtime?>((ref) {
       );
   ref.onDispose(realtime.dispose);
   return realtime;
+});
+
+/// The tenant's payment messages that are waiting for the manager or were not
+/// confirmed (newest first). Confirmed ones show as receipts instead.
+/// Rereads whenever the account does (realtime, pull to refresh, resume).
+final paymentClaimsProvider = FutureProvider<List<PaymentClaim>>((ref) {
+  ref.watch(liveTenantSeedProvider.select((seed) => seed.value));
+  final tenancyId = ref.watch(
+    tenantAccountProvider.select((a) => a.tenancy.id),
+  );
+  return ref
+      .watch(paymentClaimsRepositoryProvider)
+      .fetchOpen(tenancyId: tenancyId);
 });
 
 /// The company theme saved on this device by the last load. Null on a fresh

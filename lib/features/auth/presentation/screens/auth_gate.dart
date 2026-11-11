@@ -46,6 +46,10 @@ class _AuthGateState extends ConsumerState<AuthGate>
       _backgroundedAt = null;
       if (since != null && DateTime.now().difference(since) >= kAutoLockAfter) {
         ref.read(authProvider.notifier).lock();
+      } else if (ref.read(authProvider).stage == AuthStage.unlocked) {
+        // Realtime may have dropped while in the background: catch up on
+        // anything the manager changed (bills, payments, payment messages).
+        ref.read(tenantAccountProvider.notifier).refreshFromDatabase();
       }
     }
   }

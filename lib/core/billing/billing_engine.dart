@@ -22,6 +22,28 @@ abstract final class BillingDates {
 
   static String monthOf(String isoDate) => isoDate.substring(0, 7);
 
+  /// Billing cycles run from the 4th to the 3rd of the next month, starting
+  /// with the December 2026 cycle; earlier cycles were calendar months, so
+  /// bills already issued never move. A cycle is named after the month it
+  /// starts in.
+  static const cycleStartDay = 4;
+  static const firstCycleOnStartDay = '2026-12';
+
+  /// The day a billing cycle starts, which is when its bill is issued.
+  static String cycleStart(String month) =>
+      month.compareTo(firstCycleOnStartDay) >= 0
+      ? '$month-${cycleStartDay.toString().padLeft(2, '0')}'
+      : '$month-01';
+
+  /// The billing cycle a date falls in.
+  static String cycleOf(String isoDate) {
+    final month = monthOf(isoDate);
+    return month.compareTo(firstCycleOnStartDay) >= 0 &&
+            int.parse(isoDate.substring(8, 10)) < cycleStartDay
+        ? addMonths(month, -1)
+        : month;
+  }
+
   static String addMonths(String month, int delta) {
     final year = int.parse(month.substring(0, 4));
     final mon = int.parse(month.substring(5, 7));
@@ -99,18 +121,6 @@ String groupThousands(int value) {
   return buffer.toString();
 }
 
-/// Rent for a mid-month move-in: days left in the month, counting the
-/// move-in day. A move-in on the 1st pays the full month (days == null).
-({int amount, ProratedDays? days}) proratedRent(int rent, String moveIn) {
-  final of = BillingDates.daysInMonth(BillingDates.monthOf(moveIn));
-  final days = of - int.parse(moveIn.substring(8, 10)) + 1;
-  if (days >= of) return (amount: rent, days: null);
-  return (
-    amount: (rent * days / of).round(),
-    days: ProratedDays(days: days, of: of),
-  );
-}
-
 class BillingEngine {
   const BillingEngine(this.seed);
 
@@ -134,11 +144,25 @@ class BillingEngine {
     return seed.meterReadings[unitId]?[month];
   }
 
-  WaterUsage? _waterFor(String unitId, String month, int rate, int? opening) {
+  /// Water for a month: its reading minus the last one before it since the
+  /// tenancy began (or the move-in reading). A skipped month is billed on the
+  /// next reading, covering all the water used since.
+  WaterUsage? _waterFor(
+    String unitId,
+    String month,
+    int rate,
+    String since,
+    int? opening,
+  ) {
     final current = _reading(unitId, month);
     if (current == null) return null;
-    final previous =
-        opening ?? _reading(unitId, BillingDates.addMonths(month, -1));
+    final readings = seed.meterReadings[unitId] ?? const <String, int>{};
+    final earlier =
+        readings.keys
+            .where((m) => m.compareTo(since) >= 0 && m.compareTo(month) < 0)
+            .toList()
+          ..sort();
+    final previous = earlier.isNotEmpty ? readings[earlier.last] : opening;
     if (previous == null) return null;
     final units = current < previous ? 0 : current - previous;
     return WaterUsage(
@@ -150,8 +174,8 @@ class BillingEngine {
   }
 
   (String, String)? billingWindow(Tenancy tenancy) {
-    final asOfMonth = BillingDates.monthOf(seed.asOf);
-    final moveInMonth = BillingDates.monthOf(tenancy.moveIn);
+    final asOfMonth = BillingDates.cycleOf(seed.asOf);
+    final moveInMonth = BillingDates.cycleOf(tenancy.moveIn);
     final start = companyOf(tenancy).settings.ledgerStartMonth;
     final first = moveInMonth.compareTo(start) > 0 ? moveInMonth : start;
 
@@ -159,14 +183,14 @@ class BillingEngine {
         seed.meterReadings[tenancy.unitId]?.keys.toList() ?? const <String>[];
     final tenancyPayments = seed.payments
         .where((p) => p.tenancyId == tenancy.id)
-        .map((p) => BillingDates.monthOf(p.date))
+        .map((p) => BillingDates.cycleOf(p.date))
         .toList();
     final candidates = [asOfMonth, ...unitReadings, ...tenancyPayments]..sort();
     final maxActive = candidates.last;
 
     final finalMonth = tenancy.moveOut == null
         ? maxActive
-        : BillingDates.addMonths(BillingDates.monthOf(tenancy.moveOut!), 1);
+        : BillingDates.addMonths(BillingDates.cycleOf(tenancy.moveOut!), 1);
     var last = finalMonth.compareTo(maxActive) < 0 ? finalMonth : maxActive;
     // Paid before the first bill (deposit and rent ahead of moving in): issue
     // the move-in bill so the payment has a bill to count against.
@@ -184,10 +208,10 @@ class BillingEngine {
     final unit = unitOf(tenancy);
     final property = propertyOf(tenancy);
     final settings = companyOf(tenancy).settings;
-    final moveInMonth = BillingDates.monthOf(tenancy.moveIn);
+    final moveInMonth = BillingDates.cycleOf(tenancy.moveIn);
     final finalMonth = tenancy.moveOut == null
         ? null
-        : BillingDates.addMonths(BillingDates.monthOf(tenancy.moveOut!), 1);
+        : BillingDates.addMonths(BillingDates.cycleOf(tenancy.moveOut!), 1);
     final payments =
         seed.payments.where((p) => p.tenancyId == tenancy.id).toList()..sort(
           (a, b) => '${a.date}${a.time}'.compareTo('${b.date}${b.time}'),
@@ -206,22 +230,18 @@ class BillingEngine {
 
       final lines = <BillLine>[];
       WaterUsage? water;
-      ProratedDays? rentDays;
       final rates = property.ratesFor(month);
-      // The first water bill after a move-in starts from the move-in reading.
-      final opening =
-          tenancy.openingReading != null &&
-              BillingDates.addMonths(moveInMonth, 1) == month
-          ? tenancy.openingReading
-          : null;
 
       switch (kind) {
         case BillKind.moveIn:
-          final rent = proratedRent(tenancy.rent, tenancy.moveIn);
-          rentDays = rent.days;
           lines
             ..add(BillLine(kind: BillLineKind.deposit, amount: tenancy.deposit))
-            ..add(BillLine(kind: BillLineKind.rent, amount: rent.amount));
+            ..add(
+              BillLine(
+                kind: BillLineKind.rent,
+                amount: tenancy.moveInRent ?? tenancy.rent,
+              ),
+            );
           final moveInGarbage = tenancy.moveInGarbage ?? 0;
           if (moveInGarbage > 0) {
             lines.add(
@@ -242,7 +262,13 @@ class BillingEngine {
             lines.add(BillLine(kind: BillLineKind.water, amount: water.amount));
           }
         case BillKind.monthly:
-          water = _waterFor(unit.id, month, rates.waterRate, opening);
+          water = _waterFor(
+            unit.id,
+            month,
+            rates.waterRate,
+            moveInMonth,
+            tenancy.openingReading,
+          );
           lines.add(BillLine(kind: BillLineKind.rent, amount: tenancy.rent));
           if (water != null && water.units > 0) {
             lines.add(BillLine(kind: BillLineKind.water, amount: water.amount));
@@ -251,7 +277,13 @@ class BillingEngine {
             BillLine(kind: BillLineKind.garbage, amount: rates.garbageFee),
           );
         case BillKind.finalBill:
-          water = _waterFor(unit.id, month, rates.waterRate, opening);
+          water = _waterFor(
+            unit.id,
+            month,
+            rates.waterRate,
+            moveInMonth,
+            tenancy.openingReading,
+          );
           if (water != null && water.units > 0) {
             lines.add(BillLine(kind: BillLineKind.water, amount: water.amount));
           }
@@ -270,10 +302,11 @@ class BillingEngine {
           }
       }
 
-      // Payments made before the first bill count towards it.
+      // A payment counts towards the cycle it was made in; payments made
+      // before the first bill count towards it.
       final monthPayments = payments
           .where((p) {
-            final paidIn = BillingDates.monthOf(p.date);
+            final paidIn = BillingDates.cycleOf(p.date);
             return paidIn == month ||
                 (month == window.$1 && paidIn.compareTo(month) < 0);
           })
@@ -284,7 +317,6 @@ class BillingEngine {
         kind: kind,
         dueDate: BillingDates.dueDateOf(month, settings.dueDay),
         graceDate: BillingDates.dueDateOf(month, settings.graceDay),
-        rentDays: rentDays,
         lines: List.unmodifiable(lines),
         water: water,
         balanceBf: balanceBf,

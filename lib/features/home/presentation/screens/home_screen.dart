@@ -5,7 +5,6 @@ import '../../../../core/config/features.dart';
 import '../../../../core/billing/billing_models.dart';
 import '../../../../core/models/payment_receipt.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_motion.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../billing/presentation/state/tenant_account_providers.dart';
@@ -22,7 +21,7 @@ import '../widgets/action_needed_card.dart';
 import '../widgets/ask_nyumbani_promo_card.dart';
 import '../widgets/current_bill_card.dart';
 import '../widgets/hero_balance_card.dart';
-import '../widgets/pay_rent_flow_view.dart';
+import '../widgets/payment_claims_card.dart';
 import '../widgets/recent_transactions_card.dart';
 import '../../../auth/presentation/state/auth_providers.dart';
 import '../../../auth/presentation/widgets/change_pin_sheet.dart';
@@ -37,74 +36,49 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final navNotifier = ref.read(navigationProvider.notifier);
-    final payRentState = ref.watch(homePayRentProvider);
     final payRentNotifier = ref.read(homePayRentProvider.notifier);
     final account = ref.watch(tenantAccountProvider);
     final unreadCount = ref.watch(unreadNotificationsProvider).length;
     final updateState = ref.watch(appUpdateProvider);
     final paymentsNotifier = ref.read(paymentsProvider.notifier);
-    final theme = Theme.of(context);
-    final motion =
-        theme.extension<AppMotionThemeExtension>() ??
-        const AppMotionThemeExtension.regular();
 
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       drawer: const AppSideNavDrawer(),
       body: SafeArea(
         bottom: false,
-        child: AnimatedSwitcher(
-          duration: motion.stateTransitionDuration,
-          switchInCurve: motion.standardEasing,
-          switchOutCurve: motion.standardEasing,
-          transitionBuilder: (child, animation) {
-            return FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 0.05),
-                  end: Offset.zero,
-                ).animate(animation),
-                child: child,
-              ),
-            );
+        child: _HomeDashboardView(
+          key: const ValueKey('home_dashboard_view'),
+          account: account,
+          unreadCount: unreadCount,
+          isTemporaryPin: ref.watch(authProvider).isTemporaryPin,
+          updateState: updateState,
+          onDismissUpdate: () =>
+              ref.read(appUpdateProvider.notifier).dismissUpdateNotice(),
+          onRefresh: () async {
+            await ref
+                .read(tenantAccountProvider.notifier)
+                .refreshFromDatabase();
           },
-          child: payRentState.isPayRentOpen
-              ? const PayRentFlowView(key: ValueKey('pay_rent_flow_view'))
-              : _HomeDashboardView(
-                  key: const ValueKey('home_dashboard_view'),
-                  account: account,
-                  unreadCount: unreadCount,
-                  isTemporaryPin: ref.watch(authProvider).isTemporaryPin,
-                  updateState: updateState,
-                  onDismissUpdate: () => ref
-                      .read(appUpdateProvider.notifier)
-                      .dismissUpdateNotice(),
-                  onRefresh: () async {
-                    await ref
-                        .read(tenantAccountProvider.notifier)
-                        .refreshFromDatabase();
-                  },
-                  onPayRentPressed: payRentNotifier.openPayRent,
-                  onSeeAllPressed: () {
-                    paymentsNotifier.resetToList(PaymentsView.receipts);
-                    navNotifier.navigateToPayments();
-                  },
-                  onActionNeededPressed: navNotifier.navigateToMessages,
-                  onBillPressed: (bill) {
-                    paymentsNotifier.selectBill(bill.month);
-                    navNotifier.navigateToPayments();
-                  },
-                  onTransactionTapped: (index) {
-                    final receipts = account.receipts;
-                    if (index < receipts.length) {
-                      paymentsNotifier
-                        ..resetToList(PaymentsView.receipts)
-                        ..selectReceipt(receipts[index]);
-                      navNotifier.navigateToPayments();
-                    }
-                  },
-                ),
+          onPayRentPressed: payRentNotifier.openPayRent,
+          onSeeAllPressed: () {
+            paymentsNotifier.resetToList(PaymentsView.receipts);
+            navNotifier.navigateToPayments();
+          },
+          onActionNeededPressed: navNotifier.navigateToMessages,
+          onBillPressed: (bill) {
+            paymentsNotifier.selectBill(bill.month);
+            navNotifier.navigateToPayments();
+          },
+          onTransactionTapped: (index) {
+            final receipts = account.receipts;
+            if (index < receipts.length) {
+              paymentsNotifier
+                ..resetToList(PaymentsView.receipts)
+                ..selectReceipt(receipts[index]);
+              navNotifier.navigateToPayments();
+            }
+          },
         ),
       ),
     );
@@ -545,6 +519,7 @@ class _HomeDashboardView extends StatelessWidget {
                   ? () => onBillPressed(account.currentBill!)
                   : null,
             ),
+            const PaymentClaimsCard(),
             if (kLeasesEnabled && account.tenancy.renewal != null) ...[
               const SizedBox(height: AppSpacing.md),
               ActionNeededCard(

@@ -6,8 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prop_mgt_app/app.dart';
 import 'package:prop_mgt_app/core/billing/billing_models.dart';
+import 'package:prop_mgt_app/core/billing/payment_claim.dart';
 import 'package:prop_mgt_app/core/billing/seed/tenant_seed.g.dart';
 import 'package:prop_mgt_app/core/data/data_mode.dart';
+import 'package:prop_mgt_app/core/data/payment_claims_repository.dart';
 import 'package:prop_mgt_app/core/data/supabase_billing_providers.dart';
 import 'package:prop_mgt_app/core/data/supabase_billing_repository.dart';
 import 'package:prop_mgt_app/features/auth/domain/auth_models.dart';
@@ -15,8 +17,6 @@ import 'package:prop_mgt_app/features/auth/presentation/state/auth_notifier.dart
 import 'package:prop_mgt_app/features/auth/presentation/state/auth_providers.dart';
 import 'package:prop_mgt_app/features/auth/presentation/state/auth_state.dart';
 import 'package:prop_mgt_app/features/billing/presentation/state/tenant_account_providers.dart';
-import 'package:prop_mgt_app/features/home/domain/models/pay_rent_models.dart';
-import 'package:prop_mgt_app/features/home/presentation/state/home_pay_rent_providers.dart';
 import 'package:prop_mgt_app/features/messages/domain/models/chat_message.dart';
 import 'package:prop_mgt_app/features/messages/presentation/state/messages_providers.dart';
 import 'package:prop_mgt_app/features/navigation/presentation/state/navigation_providers.dart';
@@ -35,17 +35,14 @@ BillingSeed _liveSeed() {
   return BillingSeed.fromJson(json);
 }
 
-/// The slice with the company's M-Pesa test mode on, optionally with a
-/// simulated payment the database has recorded.
-BillingSeed _liveSeedTestMode({Map<String, dynamic>? withPayment}) {
+/// The slice after the manager confirmed a payment message.
+BillingSeed _liveSeedWithPayment(Map<String, dynamic> payment) {
   final json =
       jsonDecode(kTenantSeedsByPhone[kDefaultTenantPhone]!)
           as Map<String, dynamic>;
   final tenant = (json['tenants'] as List).single as Map<String, dynamic>;
   tenant['name'] = 'Wanjiru Kamau';
-  final company = (json['companies'] as List).single as Map<String, dynamic>;
-  (company['settings'] as Map<String, dynamic>)['mpesaSimulation'] = true;
-  if (withPayment != null) (json['payments'] as List).add(withPayment);
+  (json['payments'] as List).add(payment);
   return BillingSeed.fromJson(json);
 }
 
@@ -71,16 +68,6 @@ class _FakeRepository extends SupabaseBillingRepository {
   int ticketsSaved = 0;
   int messagesSaved = 0;
   List<TenantNotification> notifications = [];
-  final simulatedAmounts = <int>[];
-  bool refuseSimulation = false;
-
-  @override
-  Future<String> simulateMpesaPayment(int amount, {String? tenancyId}) async {
-    if (refuseSimulation) throw Exception('M-Pesa test mode is off');
-    simulatedAmounts.add(amount);
-    return 'RCT-2610-0999';
-  }
-
   final markedRead = <String>[];
 
   @override
@@ -166,12 +153,43 @@ class _FakeRepository extends SupabaseBillingRepository {
   }
 }
 
+/// Stands in for submit_payment_claim: reads the reference and amount the
+/// way the database does for an M-Pesa message, or refuses.
+class _FakeClaims implements PaymentClaimsRepository {
+  final open = <PaymentClaim>[];
+  String? refusal;
+
+  @override
+  Future<PaymentClaim> submit({
+    required String tenancyId,
+    required String message,
+  }) async {
+    if (refusal != null) throw PaymentClaimRefused(refusal!);
+    final claim = PaymentClaim(
+      id: 'c${open.length + 1}',
+      status: PaymentClaimStatus.pending,
+      createdAt: '2026-10-07T10:31:00+03:00',
+      reference: RegExp(r'^([A-Z0-9]{10}) Confirmed').firstMatch(message)?[1],
+      amount: 18950,
+    );
+    open.insert(0, claim);
+    return claim;
+  }
+
+  @override
+  Future<List<PaymentClaim>> fetchOpen({required String tenancyId}) async =>
+      List.of(open);
+}
+
 class _SignedIn extends AuthNotifier {
   @override
   build() => const AuthState(stage: AuthStage.unlocked, phone: '+254733605118');
 }
 
-Future<_FakeRepository> _pumpLiveApp(WidgetTester tester) async {
+Future<_FakeRepository> _pumpLiveApp(
+  WidgetTester tester, {
+  _FakeClaims? claims,
+}) async {
   tester.view.physicalSize = const Size(390 * 2, 844 * 2);
   tester.view.devicePixelRatio = 2.0;
   addTearDown(tester.view.resetPhysicalSize);
@@ -183,6 +201,9 @@ Future<_FakeRepository> _pumpLiveApp(WidgetTester tester) async {
       overrides: [
         liveDataProvider.overrideWithValue(true),
         supabaseBillingRepositoryProvider.overrideWithValue(repo),
+        paymentClaimsRepositoryProvider.overrideWithValue(
+          claims ?? _FakeClaims(),
+        ),
         tenantRealtimeProvider.overrideWith((ref) => null),
         authProvider.overrideWith(_SignedIn.new),
       ],
@@ -239,35 +260,117 @@ void main() {
     expect(find.text('Sign out'), findsOneWidget);
   });
 
-  testWidgets('pay rent shows Paybill details and never records a payment', (
+  testWidgets('pay rent: paste the message, it waits for the manager', (
     tester,
   ) async {
-    final repo = await _pumpLiveApp(tester);
+    final claims = _FakeClaims();
+    final repo = await _pumpLiveApp(tester, claims: claims);
     repo.fetches.single.complete(_liveSeed());
     await tester.pumpAndSettle();
     final container = _container(tester);
-    final receiptsBefore = container
-        .read(tenantAccountProvider)
-        .receipts
-        .length;
+    final tenancyId = container.read(tenantAccountProvider).tenancy.id;
 
-    container.read(homePayRentProvider.notifier).openPayRent();
+    await tester.tap(find.text('Pay rent'));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('mpesa_paybill_details')), findsOneWidget);
-    expect(find.textContaining('STK push'), findsNothing);
+    expect(find.byKey(const ValueKey('pay_rent_details')), findsOneWidget);
+    expect(find.text('Balance due KES 18,950'), findsOneWidget);
 
-    // "Pay now" explains Lipa na M-Pesa with this bill's details; it
-    // doesn't pretend a payment happened.
-    await tester.tap(find.byKey(const ValueKey('mpesa_pay_now')));
+    await tester.enterText(
+      find.byKey(const ValueKey('pay_rent_message')),
+      'UKA1D18L3S Confirmed. Ksh18,950.00 sent to HARBORRIDGE for account '
+      'RC-5A on 7/10/26 at 10:30 AM',
+    );
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const ValueKey('pay_rent_send')));
+    await tester.tap(find.byKey(const ValueKey('pay_rent_send')));
     await tester.pumpAndSettle();
-    expect(find.text('Pay with M-Pesa'), findsOneWidget);
-    expect(find.textContaining('Business number:'), findsOneWidget);
-    expect(find.text('Copy Paybill details'), findsOneWidget);
 
-    await container.read(homePayRentProvider.notifier).submitPayment();
+    expect(find.text('Sent for confirmation'), findsOneWidget);
     expect(
-      container.read(tenantAccountProvider).receipts.length,
-      receiptsBefore,
+      find.descendant(
+        of: find.byKey(const ValueKey('pay_rent_sent')),
+        matching: find.text('KES 18,950 · UKA1D18L3S'),
+      ),
+      findsOneWidget,
+    );
+    // Nothing is paid until the manager confirms.
+    expect(container.read(tenantAccountProvider).balance, 18950);
+
+    await tester.tap(find.byKey(const ValueKey('pay_rent_done')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('payment_claims_card')), findsOneWidget);
+    expect(find.text('Waiting'), findsOneWidget);
+
+    // The manager confirms: realtime makes the app reread, the payment is
+    // on the bill and the message no longer waits.
+    claims.open.clear();
+    container
+      ..invalidate(liveTenantSeedProvider)
+      ..invalidate(paymentClaimsProvider);
+    await tester.pump();
+    repo.fetches.last.complete(
+      _liveSeedWithPayment({
+        'receiptNumber': 'RCT-2610-0999',
+        'tenancyId': tenancyId,
+        'amount': 18950,
+        'date': '2026-10-07',
+        'time': '10:30',
+        'method': 'M-Pesa',
+        'reference': 'UKA1D18L3S',
+      }),
+    );
+    await tester.pumpAndSettle();
+    expect(container.read(tenantAccountProvider).balance, 0);
+    expect(find.text('Paid'), findsWidgets);
+    expect(find.byKey(const ValueKey('payment_claims_card')), findsNothing);
+  });
+
+  testWidgets('pay rent: a refused message says why and stays open', (
+    tester,
+  ) async {
+    final claims = _FakeClaims()..refusal = 'This payment is already recorded';
+    final repo = await _pumpLiveApp(tester, claims: claims);
+    repo.fetches.single.complete(_liveSeed());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Pay rent'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('pay_rent_message')),
+      'UKA1D18L3S Confirmed. Ksh18,950.00 sent to HARBORRIDGE',
+    );
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const ValueKey('pay_rent_send')));
+    await tester.tap(find.byKey(const ValueKey('pay_rent_send')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('This payment is already recorded'), findsOneWidget);
+    expect(find.text('Sent for confirmation'), findsNothing);
+    expect(find.byKey(const ValueKey('pay_rent_message')), findsOneWidget);
+  });
+
+  testWidgets('a message the manager did not confirm shows the reason', (
+    tester,
+  ) async {
+    final claims = _FakeClaims()
+      ..open.add(
+        const PaymentClaim(
+          id: 'c9',
+          status: PaymentClaimStatus.rejected,
+          createdAt: '2026-10-06T09:00:00+03:00',
+          reference: 'QWE1RTY2UI',
+          amount: 5000,
+          reviewNote: 'No such payment on our statement',
+        ),
+      );
+    final repo = await _pumpLiveApp(tester, claims: claims);
+    repo.fetches.single.complete(_liveSeed());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Not confirmed'), findsOneWidget);
+    expect(
+      find.text('Not confirmed: No such payment on our statement'),
+      findsOneWidget,
     );
   });
 
@@ -418,81 +521,5 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('notification_banner_n2')), findsNothing);
     expect(find.byKey(const ValueKey('notification_n2')), findsOneWidget);
-  });
-
-  testWidgets('M-Pesa test mode: approving records a flagged test payment', (
-    tester,
-  ) async {
-    final repo = await _pumpLiveApp(tester);
-    repo.fetches.single.complete(_liveSeedTestMode());
-    await tester.pumpAndSettle();
-    final container = _container(tester);
-    final tenancyId = container.read(tenantAccountProvider).tenancy.id;
-
-    container.read(homePayRentProvider.notifier).openPayRent();
-    await tester.pumpAndSettle();
-    // Test mode: the STK button and its note, not the Paybill steps.
-    expect(find.byKey(const ValueKey('mpesa_test_mode_note')), findsOneWidget);
-    expect(find.byKey(const ValueKey('mpesa_paybill_details')), findsNothing);
-
-    await tester.ensureVisible(find.byKey(const ValueKey('mpesa_stk_pay_now')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('mpesa_stk_pay_now')));
-    await tester.pump(const Duration(milliseconds: 1000));
-    await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('Check your phone'), findsOneWidget);
-
-    await tester.tap(find.byKey(const ValueKey('mpesa_prompt_approve')));
-    await tester.pump();
-    expect(repo.simulatedAmounts, [18950]);
-    // The receipt shows only after the app has reread the database.
-    expect(find.text('Confirming payment'), findsOneWidget);
-    repo.fetches.last.complete(
-      _liveSeedTestMode(
-        withPayment: {
-          'receiptNumber': 'RCT-2610-0999',
-          'tenancyId': tenancyId,
-          'amount': 18950,
-          'date': '2026-10-07',
-          'time': '10:30',
-          'method': 'M-Pesa',
-          'reference': 'SIMAB12CD3',
-          'simulated': true,
-        },
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('Payment received'), findsOneWidget);
-    expect(find.byKey(const ValueKey('test_payment_pill')), findsOneWidget);
-    expect(find.textContaining('RCT-2610-0999'), findsOneWidget);
-    final receipt = container.read(homePayRentProvider).completedReceipt!;
-    expect(receipt.isTest, isTrue);
-    expect(receipt.methodLabel, 'M-Pesa (test)');
-  });
-
-  testWidgets('M-Pesa test mode: a refused payment records nothing', (
-    tester,
-  ) async {
-    final repo = await _pumpLiveApp(tester);
-    repo.fetches.single.complete(_liveSeedTestMode());
-    await tester.pumpAndSettle();
-    final container = _container(tester);
-    final notifier = container.read(homePayRentProvider.notifier)
-      ..openPayRent();
-    await tester.pumpAndSettle();
-
-    repo.refuseSimulation = true;
-    final sending = notifier.submitPayment();
-    await tester.pump(const Duration(milliseconds: 1000));
-    await sending;
-    await notifier.approveMpesaPush();
-    await tester.pumpAndSettle();
-
-    final state = container.read(homePayRentProvider);
-    expect(state.step, PayRentStep.form);
-    expect(state.completedReceipt, isNull);
-    expect(state.errorText, contains('test mode was turned off'));
-    expect(find.byKey(const ValueKey('pay_rent_error')), findsOneWidget);
   });
 }

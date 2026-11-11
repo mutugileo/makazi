@@ -187,7 +187,6 @@ class CompanySettings {
     required this.graceDay,
     required this.depositSchedule,
     required this.recordRetentionMonths,
-    this.mpesaSimulation = false,
     this.theme = const CompanyTheme(),
     this.pesalinkPhone,
     this.propertyPayments = const {},
@@ -202,7 +201,6 @@ class CompanySettings {
           (bedrooms, amount) => MapEntry(int.parse(bedrooms), amount as int),
         ),
         recordRetentionMonths: json['recordRetentionMonths'] as int,
-        mpesaSimulation: json['mpesaSimulation'] == true,
         theme: json['theme'] != null && json['theme'] is Map<String, dynamic>
             ? CompanyTheme.fromJson(json['theme'] as Map<String, dynamic>)
             : const CompanyTheme(),
@@ -227,11 +225,6 @@ class CompanySettings {
   final int graceDay;
   final Map<int, int> depositSchedule;
   final int recordRetentionMonths;
-
-  /// M-Pesa test mode: "Pay now" runs a simulated STK push that the
-  /// database records as a flagged test payment. Off unless the owner turns
-  /// it on in Settings; real STK push needs Daraja.
-  final bool mpesaSimulation;
 
   /// Brand colors & style configured per company.
   final CompanyTheme theme;
@@ -323,20 +316,6 @@ class Company {
   final int receiptSequence;
   final int repairTicketSequence;
   final Subscription subscription;
-
-  Company copyWith({int? receiptSequence}) => Company(
-    id: id,
-    slug: slug,
-    name: name,
-    kraPin: kraPin,
-    mpesaPaybill: mpesaPaybill,
-    bankName: bankName,
-    bankAccount: bankAccount,
-    settings: settings,
-    receiptSequence: receiptSequence ?? this.receiptSequence,
-    repairTicketSequence: repairTicketSequence,
-    subscription: subscription,
-  );
 }
 
 /// Rates in force from a month ('YYYY-MM') onwards.
@@ -530,6 +509,7 @@ class Tenancy {
     required this.openingBalance,
     required this.openingReading,
     required this.renewal,
+    this.moveInRent,
     this.moveInGarbage,
   });
 
@@ -545,6 +525,7 @@ class Tenancy {
     leaseEnd: json['leaseEnd'] as String,
     openingBalance: json['openingBalance'] as int,
     openingReading: json['openingReading'] as int?,
+    moveInRent: (json['moveInRent'] as num?)?.toInt(),
     moveInGarbage: (json['moveInGarbage'] as num?)?.toInt(),
     renewal: json['renewal'] == null
         ? null
@@ -564,6 +545,9 @@ class Tenancy {
 
   /// Water meter at move-in; null for tenancies older than the ledger.
   final int? openingReading;
+
+  /// Rent on the move-in bill, entered by the landlord; null means a full month.
+  final int? moveInRent;
 
   /// Garbage fee override for move-in month; null falls back to property rate.
   final int? moveInGarbage;
@@ -670,22 +654,6 @@ class BillingSeed {
   final List<MessageRecord> messages;
 
   Company companyById(String id) => companies.firstWhere((c) => c.id == id);
-
-  BillingSeed copyWith({List<Payment>? payments, List<Company>? companies}) {
-    return BillingSeed(
-      asOf: asOf,
-      companies: companies ?? this.companies,
-      properties: properties,
-      units: units,
-      tenants: tenants,
-      tenancies: tenancies,
-      meterReadings: meterReadings,
-      payments: payments ?? this.payments,
-      staff: staff,
-      repairTickets: repairTickets,
-      messages: messages,
-    );
-  }
 }
 
 @immutable
@@ -850,15 +818,6 @@ class WaterUsage {
   int get amount => units * rate;
 }
 
-/// Part-month rent, e.g. 15 of 30 days for a move-in on the 16th.
-@immutable
-class ProratedDays {
-  const ProratedDays({required this.days, required this.of});
-
-  final int days;
-  final int of;
-}
-
 @immutable
 class MonthlyBill {
   const MonthlyBill({
@@ -867,7 +826,6 @@ class MonthlyBill {
     required this.kind,
     required this.dueDate,
     required this.graceDate,
-    required this.rentDays,
     required this.lines,
     required this.water,
     required this.balanceBf,
@@ -876,13 +834,14 @@ class MonthlyBill {
   });
 
   final String tenancyId;
+
+  /// The billing cycle, named after the month it starts in.
   final String month;
   final BillKind kind;
   final String dueDate;
 
   /// Last day of the grace period.
   final String graceDate;
-  final ProratedDays? rentDays;
   final List<BillLine> lines;
   final WaterUsage? water;
   final int balanceBf;

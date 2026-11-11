@@ -66,7 +66,8 @@ void main() {
     expect(find.text('New'), findsOneWidget);
     expect(find.text('No bill yet'), findsOneWidget);
     expect(find.text('First bill 1 Nov'), findsOneWidget);
-    expect(find.text('Nothing due'), findsOneWidget);
+    // Paying ahead is allowed: it becomes credit on the first bill.
+    expect(find.text('Pay rent'), findsOneWidget);
     expect(find.text('No payments yet'), findsOneWidget);
 
     // Payments: bills and receipts

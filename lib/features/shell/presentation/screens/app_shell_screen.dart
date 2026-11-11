@@ -7,9 +7,9 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../notifications/presentation/state/notifications_providers.dart';
 import '../../../billing/presentation/state/tenant_account_providers.dart';
-import '../../../home/domain/models/pay_rent_models.dart';
 import '../../../home/presentation/screens/home_screen.dart';
 import '../../../home/presentation/state/home_pay_rent_providers.dart';
+import '../../../home/presentation/widgets/pay_rent_sheet.dart';
 import '../../../messages/presentation/screens/messages_screen.dart';
 import '../../../messages/presentation/state/messages_providers.dart';
 import '../../../navigation/domain/models/app_tab.dart';
@@ -71,6 +71,21 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
           }
         });
       }
+    });
+
+    // Pay rent opens from home, notifications and their cards; the sheet is
+    // shown from here so it has a context wherever it was asked for.
+    ref.listen(homePayRentProvider.select((s) => s.isOpen), (wasOpen, isOpen) {
+      if (!isOpen || wasOpen == true) return;
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        backgroundColor: AppColors.pageBackground,
+        builder: (_) => const PayRentSheet(),
+      ).whenComplete(() {
+        if (mounted) ref.read(homePayRentProvider.notifier).closePayRent();
+      });
     });
 
     final navState = ref.watch(navigationProvider);
@@ -323,7 +338,10 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
                     ),
                   ],
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 child: Row(
                   children: [
                     Container(
@@ -411,8 +429,6 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
     final navState = ref.watch(navigationProvider);
     switch (navState.currentTab) {
       case AppTab.home:
-        final payRent = ref.watch(homePayRentProvider);
-        if (payRent.isPayRentOpen) return true;
         return navState.canPopTab;
       case AppTab.payments:
         final payments = ref.watch(paymentsProvider);
@@ -437,20 +453,6 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
 
     switch (navState.currentTab) {
       case AppTab.home:
-        final payRent = ref.read(homePayRentProvider);
-        final payRentNotifier = ref.read(homePayRentProvider.notifier);
-        if (payRent.isPayRentOpen) {
-          if (payRent.showingReceiptDetail) {
-            payRentNotifier.closeReceiptDetail();
-          } else if (payRent.step == PayRentStep.confirming) {
-            // Dismissal is ignored while a payment is actively confirming.
-          } else if (payRent.step == PayRentStep.received) {
-            payRentNotifier.finishPayRent();
-          } else {
-            payRentNotifier.closePayRent();
-          }
-          return;
-        }
         if (navState.canPopTab) {
           navNotifier.popTab();
         }

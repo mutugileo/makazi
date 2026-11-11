@@ -12,6 +12,7 @@ import 'package:prop_mgt_app/features/billing/presentation/state/tenant_account_
 import 'package:prop_mgt_app/features/home/presentation/screens/home_screen.dart';
 import 'package:prop_mgt_app/features/shell/presentation/widgets/app_side_nav_drawer.dart';
 import 'package:prop_mgt_app/features/vacation_notice/presentation/widgets/vacation_notice_sheet.dart';
+import 'package:prop_mgt_app/features/app_update/presentation/state/app_update_notifier.dart';
 import 'package:prop_mgt_app/features/app_update/presentation/widgets/app_update_sheet.dart';
 
 class _FakeBillingRepoForSideNav extends SupabaseBillingRepository {
@@ -28,7 +29,7 @@ class _FakeBillingRepoForSideNav extends SupabaseBillingRepository {
 }
 
 void main() {
-  // Installed build 3 (1.0.3), so the 1.0.5 update is offered.
+  // Installed build 3 (1.0.3), so the latest update is offered.
   setUp(() {
     PackageInfo.setMockInitialValues(
       appName: 'Makazi',
@@ -305,7 +306,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(AppUpdateSheet),
-          matching: find.text('v1.0.6'),
+          matching: find.text('v${AppUpdateNotifier.latestAppVersion}'),
         ),
         findsOneWidget,
       );

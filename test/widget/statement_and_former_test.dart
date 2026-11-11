@@ -61,7 +61,7 @@ void main() {
     expect(find.text('Habari, Joseph'), findsOneWidget);
     expect(find.text('Moved out'), findsOneWidget);
     expect(find.text('Records until 28 Feb 2027'), findsOneWidget);
-    expect(find.text('Nothing due'), findsOneWidget);
+    expect(find.text('Tenancy ended'), findsOneWidget);
     expect(find.text('Final bill'), findsOneWidget);
 
     final container = ProviderScope.containerOf(

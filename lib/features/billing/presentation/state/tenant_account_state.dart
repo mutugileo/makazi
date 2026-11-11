@@ -153,18 +153,18 @@ class TenantAccountState {
           company.settings.recordRetentionMonths,
         );
 
-  /// Before any bill exists: the 1st on which the first one is issued.
+  /// Before any bill exists: the day the first one is issued.
   String? get firstBillDate {
     if (bills.isNotEmpty) return null;
     final nextMonth = BillingDates.addMonths(
-      BillingDates.monthOf(seed.asOf),
+      BillingDates.cycleOf(seed.asOf),
       1,
     );
-    final moveInMonth = BillingDates.monthOf(tenancy.moveIn);
+    final moveInMonth = BillingDates.cycleOf(tenancy.moveIn);
     final month = moveInMonth.compareTo(nextMonth) > 0
         ? moveInMonth
         : nextMonth;
-    return '$month-01';
+    return BillingDates.cycleStart(month);
   }
 
   MonthlyBill? billFor(String month) {

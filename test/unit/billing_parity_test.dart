@@ -38,7 +38,6 @@ void main() {
           'month': b.month,
           'kind': b.kind.wire,
           'rent': b.rent,
-          'rentDays': b.rentDays?.days,
           'waterUnits': b.water?.units,
           'water': b.waterAmount,
           'garbage': b.garbage,

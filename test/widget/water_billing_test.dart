@@ -15,7 +15,6 @@ void main() {
           kind: BillKind.monthly,
           dueDate: '2026-11-05',
           graceDate: '2026-11-10',
-          rentDays: null,
           lines: [
             BillLine(kind: BillLineKind.rent, amount: 45000),
             BillLine(kind: BillLineKind.garbage, amount: 200),
@@ -71,7 +70,6 @@ void main() {
         kind: BillKind.monthly,
         dueDate: '2026-10-05',
         graceDate: '2026-10-10',
-        rentDays: null,
         lines: [
           BillLine(kind: BillLineKind.rent, amount: 45000),
           BillLine(kind: BillLineKind.water, amount: 1200),

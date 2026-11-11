@@ -5,7 +5,6 @@ import '../../../../core/billing/billing_models.dart';
 import '../../../../core/billing/seed/tenant_seed.g.dart';
 import '../../../../core/config/demo_data.dart';
 import '../../../../core/data/data_mode.dart';
-import '../../../../core/models/payment_receipt.dart';
 import '../../../auth/presentation/state/auth_providers.dart';
 import 'tenant_account_providers.dart';
 import 'tenant_account_state.dart';
@@ -50,49 +49,5 @@ class TenantAccountNotifier extends Notifier<TenantAccountState> {
     } catch (_) {
       // Shown by the shell's connection banner.
     }
-  }
-
-  /// Demo build only: records a simulated M-Pesa payment locally. The live
-  /// app never writes payments; they come from the manager or M-Pesa.
-  PaymentReceipt recordPayment({
-    required int amount,
-    required PaymentMethod method,
-    required String reference,
-    required String time,
-  }) {
-    if (ref.read(liveDataProvider)) {
-      throw StateError('Payments are recorded by the server, not the app');
-    }
-    if (amount <= 0) {
-      throw ArgumentError.value(amount, 'amount', 'must be positive');
-    }
-    final seed = state.seed;
-    final company = state.company;
-    final sequence = company.receiptSequence + 1;
-    final date = seed.asOf;
-    final receiptNumber =
-        'RCT-${date.substring(2, 4)}${date.substring(5, 7)}-'
-        '${sequence.toString().padLeft(4, '0')}';
-
-    final payment = Payment(
-      receiptNumber: receiptNumber,
-      tenancyId: state.tenancy.id,
-      amount: amount,
-      date: date,
-      time: time,
-      method: method,
-      reference: reference,
-    );
-
-    state = TenantAccountState.fromSeed(
-      seed.copyWith(
-        payments: [...seed.payments, payment],
-        companies: [
-          for (final c in seed.companies)
-            c.id == company.id ? c.copyWith(receiptSequence: sequence) : c,
-        ],
-      ),
-    );
-    return state.receipts.firstWhere((r) => r.receiptNumber == receiptNumber);
   }
 }

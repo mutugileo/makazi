@@ -1,198 +1,150 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prop_mgt_app/core/billing/payment_claim.dart';
+import 'package:prop_mgt_app/core/data/payment_claims_repository.dart';
+import 'package:prop_mgt_app/core/data/supabase_billing_providers.dart';
 import 'package:prop_mgt_app/features/billing/presentation/state/tenant_account_providers.dart';
-import 'package:prop_mgt_app/features/home/domain/models/pay_rent_models.dart';
 import 'package:prop_mgt_app/features/home/presentation/state/home_pay_rent_providers.dart';
+
+const _message =
+    'UKA1D18L3S Confirmed. Ksh31,200.00 sent to THE PHOENIX for account '
+    '404020 on 10/11/26 at 1:34 PM';
+
+/// Answers like the database: refuses, fails, or accepts and reads the message.
+class _FakeClaims implements PaymentClaimsRepository {
+  _FakeClaims({this.refusal, this.fails = false});
+
+  final String? refusal;
+  final bool fails;
+  final sent = <({String tenancyId, String message})>[];
+
+  @override
+  Future<PaymentClaim> submit({
+    required String tenancyId,
+    required String message,
+  }) async {
+    if (fails) throw Exception('offline');
+    if (refusal != null) throw PaymentClaimRefused(refusal!);
+    sent.add((tenancyId: tenancyId, message: message));
+    return const PaymentClaim(
+      id: 'c1',
+      status: PaymentClaimStatus.pending,
+      createdAt: '2026-11-10T13:40:00+03:00',
+      reference: 'UKA1D18L3S',
+      amount: 31200,
+    );
+  }
+
+  @override
+  Future<List<PaymentClaim>> fetchOpen({required String tenancyId}) async => [
+    for (final _ in sent)
+      const PaymentClaim(
+        id: 'c1',
+        status: PaymentClaimStatus.pending,
+        createdAt: '2026-11-10T13:40:00+03:00',
+      ),
+  ];
+}
+
+ProviderContainer _container(_FakeClaims claims) {
+  final container = ProviderContainer(
+    overrides: [paymentClaimsRepositoryProvider.overrideWithValue(claims)],
+  );
+  addTearDown(container.dispose);
+  return container;
+}
 
 void main() {
   group('HomePayRentNotifier', () {
-    test('initial state is closed with M-Pesa selected', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+    test('opens empty, and nothing can be sent until a message is pasted', () {
+      final container = _container(_FakeClaims());
+      container.read(homePayRentProvider.notifier).openPayRent();
 
       final state = container.read(homePayRentProvider);
+      expect(state.isOpen, isTrue);
+      expect(state.message, isEmpty);
+      expect(state.canSend, isFalse);
 
-      expect(state.isPayRentOpen, isFalse);
-      expect(state.paymentMethod, PayRentMethod.mpesa);
-      expect(state.step, PayRentStep.form);
+      container.read(homePayRentProvider.notifier).updateMessage('   ');
+      expect(container.read(homePayRentProvider).canSend, isFalse);
     });
 
-    test(
-      'openPayRent snapshots the outstanding balance as the full amount',
-      () {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-
-        container.read(homePayRentProvider.notifier).openPayRent();
-
-        final state = container.read(homePayRentProvider);
-        expect(state.isPayRentOpen, isTrue);
-        expect(state.step, PayRentStep.form);
-        expect(state.fullBalance, 18950);
-        expect(state.amountOption, PayRentAmountOption.fullBalance);
-        expect(state.amountValue, 18950);
-        expect(state.amountFormatted, 'KES 18,950');
-      },
-    );
-
-    test('other amount is validated', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+    test('sends the trimmed message for the current tenancy', () async {
+      final claims = _FakeClaims();
+      final container = _container(claims);
       final notifier = container.read(homePayRentProvider.notifier)
         ..openPayRent()
-        ..selectAmountOption(PayRentAmountOption.other);
+        ..updateMessage('  $_message  ');
 
-      expect(container.read(homePayRentProvider).canSubmit, isFalse);
+      await notifier.sendMessage();
+
+      expect(claims.sent.single.message, _message);
       expect(
-        container.read(homePayRentProvider).amountError,
-        'Enter an amount to pay',
+        claims.sent.single.tenancyId,
+        container.read(tenantAccountProvider).tenancy.id,
       );
-
-      notifier.updateOtherAmount('300000');
-      expect(container.read(homePayRentProvider).canSubmit, isFalse);
-      expect(
-        container.read(homePayRentProvider).amountError,
-        contains('250,000'),
-      );
-
-      notifier.updateOtherAmount('20000');
-      expect(container.read(homePayRentProvider).canSubmit, isTrue);
-      expect(container.read(homePayRentProvider).amountValue, 20000);
-    });
-
-    test('paying more than the balance reports the credit', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      container.read(homePayRentProvider.notifier)
-        ..openPayRent()
-        ..selectAmountOption(PayRentAmountOption.other)
-        ..updateOtherAmount('20000');
-
-      expect(container.read(homePayRentProvider).creditAfterPayment, 1050);
-    });
-
-    test('selectPaymentMethod switches between mpesa and bank transfer', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      container
-          .read(homePayRentProvider.notifier)
-          .selectPaymentMethod(PayRentMethod.bankTransfer);
-
-      expect(
-        container.read(homePayRentProvider).paymentMethod,
-        PayRentMethod.bankTransfer,
-      );
-    });
-
-    test(
-      'Pay now sends the request; approving records it before showing it received',
-      () async {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final notifier = container.read(homePayRentProvider.notifier)
-          ..openPayRent();
-
-        final sending = notifier.submitPayment();
-        expect(
-          container.read(homePayRentProvider).step,
-          PayRentStep.awaitingApproval,
-        );
-        expect(container.read(homePayRentProvider).promptShown, isFalse);
-        await sending;
-        expect(container.read(homePayRentProvider).promptShown, isTrue);
-
-        final future = notifier.approveMpesaPush();
-        expect(
-          container.read(homePayRentProvider).step,
-          PayRentStep.confirming,
-        );
-        expect(container.read(tenantAccountProvider).balance, 18950);
-
-        await future;
-
-        final state = container.read(homePayRentProvider);
-        expect(state.step, PayRentStep.received);
-        expect(state.completedReceipt?.receiptNumber, 'RCT-2610-0380');
-        expect(state.completedReceipt?.amount, 18950);
-        expect(state.completedReceipt?.forDescription, 'Bill, October 2026');
-        expect(container.read(tenantAccountProvider).balance, 0);
-      },
-    );
-
-    test('a part payment leaves the rest outstanding', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final notifier = container.read(homePayRentProvider.notifier)
-        ..openPayRent()
-        ..selectAmountOption(PayRentAmountOption.other)
-        ..updateOtherAmount('10000');
-
-      await notifier.submitPayment();
-      await notifier.approveMpesaPush();
-
-      expect(
-        container.read(homePayRentProvider).completedReceipt?.forDescription,
-        'Bill, October 2026 (part)',
-      );
-      expect(container.read(tenantAccountProvider).balance, 8950);
-    });
-
-    test('closing is ignored while a payment is confirming', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final notifier = container.read(homePayRentProvider.notifier)
-        ..openPayRent();
-
-      await notifier.submitPayment();
-      final future = notifier.approveMpesaPush();
-      notifier.closePayRent();
-      expect(container.read(homePayRentProvider).isPayRentOpen, isTrue);
-      await future;
-    });
-
-    test('declining on the phone pays nothing and says so', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final notifier = container.read(homePayRentProvider.notifier)
-        ..openPayRent();
-
-      await notifier.submitPayment();
-      notifier.declineMpesaPush();
-
       final state = container.read(homePayRentProvider);
-      expect(state.step, PayRentStep.form);
-      expect(state.errorText, contains('declined'));
-      expect(state.completedReceipt, isNull);
+      expect(state.isSending, isFalse);
+      expect(state.sentClaim?.reference, 'UKA1D18L3S');
+      expect(state.sentClaim?.amount, 31200);
+      // The balance is untouched until the manager confirms.
       expect(container.read(tenantAccountProvider).balance, 18950);
     });
 
-    test('viewCompletedReceipt and closeReceiptDetail toggle state', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+    test('a sent message shows as waiting', () async {
+      final container = _container(_FakeClaims());
       final notifier = container.read(homePayRentProvider.notifier)
-        ..openPayRent();
+        ..openPayRent()
+        ..updateMessage(_message);
+      await notifier.sendMessage();
 
-      await notifier.submitPayment();
-      await notifier.approveMpesaPush();
-      notifier.viewCompletedReceipt();
-      expect(container.read(homePayRentProvider).showingReceiptDetail, isTrue);
-
-      notifier.closeReceiptDetail();
-      expect(container.read(homePayRentProvider).showingReceiptDetail, isFalse);
+      final open = await container.read(paymentClaimsProvider.future);
+      expect(open.single.status, PaymentClaimStatus.pending);
     });
 
-    test('finishPayRent resets isPayRentOpen and step', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      container.read(homePayRentProvider.notifier)
+    test('a refusal is shown as the database worded it', () async {
+      final container = _container(
+        _FakeClaims(refusal: 'This payment is already recorded'),
+      );
+      final notifier = container.read(homePayRentProvider.notifier)
         ..openPayRent()
-        ..finishPayRent();
+        ..updateMessage(_message);
+
+      await notifier.sendMessage();
 
       final state = container.read(homePayRentProvider);
-      expect(state.isPayRentOpen, isFalse);
-      expect(state.step, PayRentStep.form);
+      expect(state.errorText, 'This payment is already recorded');
+      expect(state.sentClaim, isNull);
+      expect(state.isSending, isFalse);
+    });
+
+    test('a network failure says nothing was sent', () async {
+      final container = _container(_FakeClaims(fails: true));
+      final notifier = container.read(homePayRentProvider.notifier)
+        ..openPayRent()
+        ..updateMessage(_message);
+
+      await notifier.sendMessage();
+
+      expect(
+        container.read(homePayRentProvider).errorText,
+        contains("Couldn't send"),
+      );
+    });
+
+    test('editing the message clears the error; closing resets', () async {
+      final container = _container(_FakeClaims(refusal: 'Too many'));
+      final notifier = container.read(homePayRentProvider.notifier)
+        ..openPayRent()
+        ..updateMessage(_message);
+      await notifier.sendMessage();
+      notifier.updateMessage('$_message.');
+      expect(container.read(homePayRentProvider).errorText, isNull);
+
+      notifier.closePayRent();
+      final state = container.read(homePayRentProvider);
+      expect(state.isOpen, isFalse);
+      expect(state.message, isEmpty);
     });
   });
 }

@@ -43,8 +43,9 @@ class HeroBalanceCard extends StatelessWidget {
     final totalDue = bill?.totalDue ?? 0;
     final paid = bill?.amountPaid ?? 0;
     final progress = totalDue <= 0 ? 1.0 : (paid / totalDue).clamp(0.0, 1.0);
-    final canPay = isActive && amountDue > 0;
-    // Due on the 5th, grace period to the 20th, overdue after that.
+    // A current tenant can pay at any time; paying ahead becomes credit.
+    final canPay = isActive;
+    // Due on dueDay, grace period to graceDay, overdue after that.
     final pastDue =
         bill != null && asOf != null && asOf!.compareTo(bill.dueDate) > 0;
     final pastGrace =
@@ -239,7 +240,7 @@ class HeroBalanceCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          canPay ? 'Pay rent' : 'Nothing due',
+                          canPay ? 'Pay rent' : 'Tenancy ended',
                           style: AppTypography.sans(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,

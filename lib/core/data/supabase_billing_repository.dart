@@ -22,9 +22,12 @@ String nairobiIso(String timestamptz) {
 /// Reads the signed-in tenant's own slice of the database and writes the few
 /// things a tenant may write (repair requests, messages). Every query runs as
 /// the tenant, so row-level security decides what comes back. Payments are
-/// never written from the app: they come from the manager or M-Pesa.
+/// never written from the app: the manager records them, including when
+/// confirming a payment message (payment_claims_repository.dart).
 class SupabaseBillingRepository {
   SupabaseBillingRepository({this.client});
+
+  static final _isoDate = RegExp(r'^\d{4}-\d{2}-\d{2}$');
 
   /// For tests; the app uses the initialised Supabase client.
   final SupabaseClient? client;
@@ -198,11 +201,15 @@ class SupabaseBillingRepository {
           .toInt();
     }
 
-    final asOf = DateTime.now()
-        .toUtc()
-        .add(const Duration(hours: 3))
-        .toIso8601String()
-        .substring(0, 10);
+    // Test billing date set by the owner's test button; unset means today.
+    final testAsOf = (companyRow['settings'] as Map?)?['testAsOf'];
+    final asOf = testAsOf is String && _isoDate.hasMatch(testAsOf)
+        ? testAsOf
+        : DateTime.now()
+              .toUtc()
+              .add(const Duration(hours: 3))
+              .toIso8601String()
+              .substring(0, 10);
 
     return BillingSeed(
       asOf: asOf,
@@ -341,20 +348,6 @@ class SupabaseBillingRepository {
             : nairobiIso(row['read_at'] as String),
       );
 
-  /// M-Pesa test mode: records a simulated payment for the tenant's own
-  /// current tenancy (simulate_mpesa_payment). The database refuses unless
-  /// the company has test mode on. Returns the receipt number.
-  Future<String> simulateMpesaPayment(int amount, {String? tenancyId}) async {
-    final params = <String, dynamic>{
-      'p_amount': amount,
-      if (tenancyId != null && tenancyId.isNotEmpty) 'p_tenancy_id': tenancyId,
-    };
-    final result = await _sb
-        .rpc('simulate_mpesa_payment', params: params)
-        .timeout(const Duration(seconds: 15));
-    return ((result as Map)['receiptNumber']) as String;
-  }
-
   /// Listens for the admin's "something changed" nudges. Payloads carry no
   /// data (PropAdmin/src/lib/realtime.ts); [onChanged] should refetch.
   TenantRealtime subscribe({
@@ -440,6 +433,7 @@ class SupabaseBillingRepository {
     leaseEnd: row['lease_end'] as String,
     openingBalance: (row['opening_balance'] as num).toInt(),
     openingReading: (row['opening_reading'] as num?)?.toInt(),
+    moveInRent: (row['move_in_rent'] as num?)?.toInt(),
     moveInGarbage: (row['move_in_garbage'] as num?)?.toInt(),
     renewal: row['renewal'] != null
         ? TenancyRenewal.fromJson(row['renewal'] as Map<String, dynamic>)

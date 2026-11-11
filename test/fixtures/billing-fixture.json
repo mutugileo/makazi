@@ -733,7 +733,8 @@
       "moveIn": "2026-09-16",
       "leaseStart": "2026-09-16",
       "leaseEnd": "2027-09-15",
-      "moveInGarbage": 250
+      "moveInGarbage": 250,
+      "moveInRent": 10000
     },
     {
       "openingBalance": 0,
@@ -798,7 +799,8 @@
       "moveIn": "2026-08-12",
       "leaseStart": "2026-08-12",
       "leaseEnd": "2027-08-11",
-      "moveInGarbage": 200
+      "moveInGarbage": 200,
+      "moveInRent": 7742
     },
     {
       "openingBalance": 0,
@@ -835,7 +837,6 @@
       "2026-04": 616,
       "2026-05": 629,
       "2026-06": 637,
-      "2026-07": 647,
       "2026-08": 662,
       "2026-09": 680,
       "2026-10": 690

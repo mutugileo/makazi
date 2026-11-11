@@ -58,37 +58,38 @@ void main() {
       expect(receipts[2].forDescription, 'Bill, August 2026');
     });
 
-    test('recordPayment rejects non-positive amounts', () {
+    test('a confirmed overpayment turns the balance into credit', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
+      final base = container.read(tenantAccountProvider).seed;
 
-      expect(
-        () => container
-            .read(tenantAccountProvider.notifier)
-            .recordPayment(
-              amount: 0,
-              method: PaymentMethod.mpesa,
-              reference: 'X',
+      final account = TenantAccountState.fromSeed(
+        BillingSeed(
+          asOf: base.asOf,
+          companies: base.companies,
+          properties: base.properties,
+          units: base.units,
+          tenants: base.tenants,
+          tenancies: base.tenancies,
+          meterReadings: base.meterReadings,
+          payments: [
+            ...base.payments,
+            Payment(
+              receiptNumber: 'RCT-2610-0999',
+              tenancyId: base.tenancies.single.id,
+              amount: 20000,
+              date: base.asOf,
               time: '10:00',
+              method: PaymentMethod.mpesa,
+              reference: 'SKTEST0001',
             ),
-        throwsArgumentError,
+          ],
+          staff: base.staff,
+          repairTickets: base.repairTickets,
+          messages: base.messages,
+        ),
       );
-    });
 
-    test('overpaying turns the balance into credit', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      container
-          .read(tenantAccountProvider.notifier)
-          .recordPayment(
-            amount: 20000,
-            method: PaymentMethod.mpesa,
-            reference: 'SKTEST0001',
-            time: '10:00',
-          );
-
-      final account = container.read(tenantAccountProvider);
       expect(account.balance, -1050);
       expect(account.currentBill!.status, BillStatus.credit);
     });
