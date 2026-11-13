@@ -160,6 +160,20 @@ class HeroBalanceCard extends StatelessWidget {
                           letterSpacing: -0.5,
                         ),
                       ),
+                      // What came in from earlier bills: arrears owed, or
+                      // credit already taken off this bill.
+                      if (bill != null && bill.balanceBf != 0)
+                        Text(
+                          bill.balanceBf > 0
+                              ? 'Includes ${formatKes(bill.balanceBf)} arrears'
+                              : 'After ${formatKes(-bill.balanceBf)} credit',
+                          key: const ValueKey('hero_carried_balance'),
+                          style: AppTypography.sans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: effectiveOnPrimary.withValues(alpha: 0.85),
+                          ),
+                        ),
                       const SizedBox(height: AppSpacing.md),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(

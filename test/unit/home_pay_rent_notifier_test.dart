@@ -146,5 +146,53 @@ void main() {
       expect(state.isOpen, isFalse);
       expect(state.message, isEmpty);
     });
+
+    test('rejects non-payment text without calling the repository', () async {
+      final claims = _FakeClaims();
+      final container = _container(claims);
+      final notifier = container.read(homePayRentProvider.notifier)
+        ..openPayRent()
+        ..updateMessage('Hello landlord, I will pay rent on Friday evening');
+
+      await notifier.sendMessage();
+
+      expect(claims.sent, isEmpty);
+      final state = container.read(homePayRentProvider);
+      expect(state.sentClaim, isNull);
+      expect(state.isSending, isFalse);
+      expect(state.errorText, contains('reference and amount'));
+    });
+
+    test('rejects a short message without calling the repository', () async {
+      final claims = _FakeClaims();
+      final container = _container(claims);
+      final notifier = container.read(homePayRentProvider.notifier)
+        ..openPayRent()
+        ..updateMessage('UKA1D18L3S');
+
+      await notifier.sendMessage();
+
+      expect(claims.sent, isEmpty);
+      expect(
+        container.read(homePayRentProvider).errorText,
+        'Paste the whole confirmation message',
+      );
+    });
+
+    test('accepts a received-side M-Pesa confirmation message', () async {
+      final claims = _FakeClaims();
+      final container = _container(claims);
+      const received =
+          'Confirmed. You have received KES 31200.00 for Account 404020 '
+          'from AUGUSTINE MUSA. # Mpesa Ref:UKA1D18L3S on 10-11-2026 13:34Hrs';
+      final notifier = container.read(homePayRentProvider.notifier)
+        ..openPayRent()
+        ..updateMessage(received);
+
+      await notifier.sendMessage();
+
+      expect(claims.sent.single.message, received);
+      expect(container.read(homePayRentProvider).errorText, isNull);
+    });
   });
 }

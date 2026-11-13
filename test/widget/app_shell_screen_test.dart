@@ -48,7 +48,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Water'), findsOneWidget);
       expect(find.text('15 units × KES 150'), findsOneWidget);
-      expect(find.text('Balance from September'), findsOneWidget);
+      expect(find.text('Arrears from September'), findsOneWidget);
       expect(find.textContaining('units used in September'), findsOneWidget);
       await tester.tap(find.byIcon(Icons.chevron_left_rounded));
       await tester.pumpAndSettle();

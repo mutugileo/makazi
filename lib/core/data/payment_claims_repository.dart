@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../billing/payment_claim.dart';
+import '../billing/payment_message_validator.dart';
 import 'supabase_billing_repository.dart';
 
 /// Where the tenant's payment messages go: the database in the live app, this
@@ -85,8 +86,9 @@ class DemoPaymentClaimsRepository implements PaymentClaimsRepository {
     required String tenancyId,
     required String message,
   }) async {
-    if (message.trim().length < 20) {
-      throw const PaymentClaimRefused('Paste the whole confirmation message');
+    final validationError = validatePaymentMessage(message);
+    if (validationError != null) {
+      throw PaymentClaimRefused(validationError);
     }
     final now = DateTime.now().toUtc().add(const Duration(hours: 3));
     final claim = PaymentClaim(

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/billing/payment_claim.dart';
+import '../../../../core/billing/payment_message_validator.dart';
 import '../../../../core/data/supabase_billing_providers.dart';
 import '../../../billing/presentation/state/tenant_account_providers.dart';
 import 'home_pay_rent_ui_state.dart';
@@ -21,12 +22,18 @@ class HomePayRentNotifier extends Notifier<HomePayRentUiState> {
 
   Future<void> sendMessage() async {
     if (!state.canSend) return;
+    final trimmed = state.message.trim();
+    final validationError = validatePaymentMessage(trimmed);
+    if (validationError != null) {
+      state = state.copyWith(errorText: () => validationError);
+      return;
+    }
     state = state.copyWith(isSending: true, errorText: () => null);
     final tenancyId = ref.read(tenantAccountProvider).tenancy.id;
     try {
       final claim = await ref
           .read(paymentClaimsRepositoryProvider)
-          .submit(tenancyId: tenancyId, message: state.message.trim());
+          .submit(tenancyId: tenancyId, message: trimmed);
       ref.invalidate(paymentClaimsProvider);
       if (!ref.mounted) return;
       state = state.copyWith(isSending: false, sentClaim: () => claim);

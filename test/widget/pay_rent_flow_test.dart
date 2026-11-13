@@ -17,7 +17,8 @@ void main() {
     // Home shows the October bill with September's unpaid water carried in.
     expect(find.text('KES 18,950'), findsWidgets);
     expect(find.text('October bill'), findsOneWidget);
-    expect(find.text('Balance from September'), findsOneWidget);
+    expect(find.text('Arrears from September'), findsOneWidget);
+    expect(find.text('Includes KES 1,450 arrears'), findsOneWidget);
     expect(find.text('KES 1,450'), findsOneWidget);
     expect(find.text('KES 15,000 paid of KES 33,950'), findsOneWidget);
     // Due on the 5th; on 6 Oct the tenant is inside the grace period.
