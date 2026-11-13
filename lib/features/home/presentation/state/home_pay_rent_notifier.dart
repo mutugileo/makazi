@@ -14,6 +14,12 @@ class HomePayRentNotifier extends Notifier<HomePayRentUiState> {
 
   void openPayRent() => state = const HomePayRentUiState(isOpen: true);
 
+  void openPayRentForEdit(PaymentClaim claim) => state = HomePayRentUiState(
+    isOpen: true,
+    message: claim.message ?? '',
+    editingClaimId: claim.id,
+  );
+
   void closePayRent() => state = const HomePayRentUiState();
 
   void updateMessage(String message) {
@@ -30,10 +36,12 @@ class HomePayRentNotifier extends Notifier<HomePayRentUiState> {
     }
     state = state.copyWith(isSending: true, errorText: () => null);
     final tenancyId = ref.read(tenantAccountProvider).tenancy.id;
+    final editingId = state.editingClaimId;
     try {
-      final claim = await ref
-          .read(paymentClaimsRepositoryProvider)
-          .submit(tenancyId: tenancyId, message: trimmed);
+      final repo = ref.read(paymentClaimsRepositoryProvider);
+      final claim = editingId != null
+          ? await repo.updateClaim(claimId: editingId, message: trimmed)
+          : await repo.submit(tenancyId: tenancyId, message: trimmed);
       ref.invalidate(paymentClaimsProvider);
       if (!ref.mounted) return;
       state = state.copyWith(isSending: false, sentClaim: () => claim);

@@ -21,6 +21,7 @@ class PaymentClaim {
     required this.id,
     required this.status,
     required this.createdAt,
+    this.message,
     this.reference,
     this.amount,
     this.reviewNote,
@@ -31,6 +32,9 @@ class PaymentClaim {
 
   /// Nairobi time, 'YYYY-MM-DDTHH:MM:SS+03:00'.
   final String createdAt;
+
+  /// Original confirmation text pasted by the tenant.
+  final String? message;
 
   /// Read from the message; null when it couldn't be read.
   final String? reference;

@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/billing/billing_engine.dart';
 import '../../../../core/billing/payment_claim.dart';
+import '../../../../core/data/supabase_billing_providers.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/brand_colors.dart';
 import '../../../billing/presentation/state/tenant_account_providers.dart';
+import '../state/home_pay_rent_providers.dart';
 
 /// Payment messages the tenant sent that the manager hasn't confirmed:
 /// waiting, or not confirmed with the reason. Hidden when there are none.
@@ -50,14 +53,44 @@ class PaymentClaimsCard extends ConsumerWidget {
   }
 }
 
-class _ClaimRow extends StatelessWidget {
+class _ClaimRow extends ConsumerStatefulWidget {
   const _ClaimRow({required this.claim, required this.companyName});
 
   final PaymentClaim claim;
   final String companyName;
 
   @override
+  ConsumerState<_ClaimRow> createState() => _ClaimRowState();
+}
+
+class _ClaimRowState extends ConsumerState<_ClaimRow> {
+  bool _deleting = false;
+
+  Future<void> _deleteClaim() async {
+    if (_deleting) return;
+    setState(() => _deleting = true);
+    try {
+      await ref
+          .read(paymentClaimsRepositoryProvider)
+          .deleteClaim(claimId: widget.claim.id);
+      ref.invalidate(paymentClaimsProvider);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not delete payment message. Try again.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _deleting = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final claim = widget.claim;
+    final companyName = widget.companyName;
     final rejected = claim.status == PaymentClaimStatus.rejected;
     final title = [
       if (claim.amount != null) formatKes(claim.amount!),
@@ -117,6 +150,51 @@ class _ClaimRow extends StatelessWidget {
                   height: 1.35,
                 ),
               ),
+              if (rejected) ...[
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  children: [
+                    TextButton.icon(
+                      key: ValueKey('claim_edit_${claim.id}'),
+                      onPressed: _deleting
+                          ? null
+                          : () => ref
+                                .read(homePayRentProvider.notifier)
+                                .openPayRentForEdit(claim),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        foregroundColor: context.brand.link,
+                      ),
+                      icon: const Icon(Icons.edit_outlined, size: 15),
+                      label: const Text('Edit', style: TextStyle(fontSize: 12)),
+                    ),
+                    TextButton.icon(
+                      key: ValueKey('claim_delete_${claim.id}'),
+                      onPressed: _deleting ? null : _deleteClaim,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        foregroundColor: AppColors.statusUnpaidText,
+                      ),
+                      icon: const Icon(Icons.delete_outline, size: 15),
+                      label: Text(
+                        _deleting ? 'Deleting…' : 'Delete',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),

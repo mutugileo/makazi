@@ -25,6 +25,15 @@ class _PayRentSheetState extends ConsumerState<PayRentSheet> {
   final _message = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    final initialMessage = ref.read(homePayRentProvider).message;
+    if (initialMessage.isNotEmpty) {
+      _message.text = initialMessage;
+    }
+  }
+
+  @override
   void dispose() {
     _message.dispose();
     super.dispose();
@@ -60,7 +69,7 @@ class _PayRentSheetState extends ConsumerState<PayRentSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Pay rent',
+                      state.isEditing ? 'Edit payment message' : 'Pay rent',
                       style: AppTypography.editorialSerif(
                         fontSize: 28,
                         fontWeight: FontWeight.w400,
@@ -196,6 +205,8 @@ class _PayRentSheetState extends ConsumerState<PayRentSheet> {
                         child: Text(
                           state.isSending
                               ? 'Sending…'
+                              : state.isEditing
+                              ? 'Update & resend'
                               : 'Send for confirmation',
                           style: AppTypography.sans(
                             fontSize: 16,

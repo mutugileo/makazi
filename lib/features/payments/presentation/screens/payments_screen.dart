@@ -97,7 +97,7 @@ class PaymentsScreen extends ConsumerWidget {
   }
 }
 
-class _PaymentsListView extends StatelessWidget {
+class _PaymentsListView extends StatefulWidget {
   const _PaymentsListView({
     super.key,
     required this.account,
@@ -116,13 +116,46 @@ class _PaymentsListView extends StatelessWidget {
   final VoidCallback onStatementPressed;
 
   @override
+  State<_PaymentsListView> createState() => _PaymentsListViewState();
+}
+
+class _PaymentsListViewState extends State<_PaymentsListView> {
+  static const int _pageSize = 5;
+  int _page = 0;
+
+  @override
+  void didUpdateWidget(covariant _PaymentsListView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.view != widget.view) {
+      _page = 0;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final account = widget.account;
+    final view = widget.view;
     final mediaQuery = MediaQuery.of(context);
     final systemBottomPadding = mediaQuery.padding.bottom;
     final scrollBottomPadding = systemBottomPadding + 86.0;
     final balance = account.balance;
     final bills = account.bills.reversed.toList(growable: false);
     final receipts = account.receipts;
+    final totalCount = view == PaymentsView.bills
+        ? bills.length
+        : receipts.length;
+    final totalPages = totalCount == 0
+        ? 1
+        : ((totalCount + _pageSize - 1) ~/ _pageSize);
+    final safePage = _page.clamp(0, totalPages - 1);
+    final start = safePage * _pageSize;
+    final end = (start + _pageSize).clamp(0, totalCount);
+    final pageBills = view == PaymentsView.bills
+        ? bills.sublist(start, end)
+        : const <MonthlyBill>[];
+    final pageReceipts = view == PaymentsView.receipts
+        ? receipts.sublist(start, end)
+        : const <PaymentReceipt>[];
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
@@ -169,7 +202,7 @@ class _PaymentsListView extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
               key: const ValueKey('open_statement'),
-              onPressed: onStatementPressed,
+              onPressed: widget.onStatementPressed,
               icon: Icon(
                 Icons.description_outlined,
                 size: 18,
@@ -186,7 +219,7 @@ class _PaymentsListView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.xl),
-          _ViewToggle(view: view, onChanged: onViewChanged),
+          _ViewToggle(view: view, onChanged: widget.onViewChanged),
           const SizedBox(height: AppSpacing.md),
           Container(
             decoration: BoxDecoration(
@@ -195,45 +228,75 @@ class _PaymentsListView extends StatelessWidget {
               border: Border.all(color: AppColors.borderLight),
             ),
             child: Column(
-              children: view == PaymentsView.bills
-                  ? [
-                      if (bills.isEmpty)
-                        const EmptyState(
-                          icon: Icons.description_outlined,
-                          title: 'No bills yet',
-                          message: 'Bills are issued on the 1st of each month.',
-                        ),
-                      for (int i = 0; i < bills.length; i++) ...[
-                        if (i > 0)
-                          const Divider(
-                            height: 1,
-                            color: AppColors.borderLight,
+              children: [
+                if (view == PaymentsView.bills) ...[
+                  if (bills.isEmpty)
+                    const EmptyState(
+                      icon: Icons.description_outlined,
+                      title: 'No bills yet',
+                      message: 'Bills are issued on the 1st of each month.',
+                    ),
+                  for (int i = 0; i < pageBills.length; i++) ...[
+                    if (i > 0)
+                      const Divider(height: 1, color: AppColors.borderLight),
+                    _BillTile(
+                      bill: pageBills[i],
+                      onTap: () => widget.onBillSelected(pageBills[i]),
+                    ),
+                  ],
+                ] else ...[
+                  if (receipts.isEmpty)
+                    const EmptyState(
+                      icon: Icons.receipt_long_outlined,
+                      title: 'No payments yet',
+                      message: 'Every payment gets a receipt here.',
+                    ),
+                  for (int i = 0; i < pageReceipts.length; i++) ...[
+                    if (i > 0)
+                      const Divider(height: 1, color: AppColors.borderLight),
+                    _ReceiptTile(
+                      receipt: pageReceipts[i],
+                      onTap: () => widget.onReceiptSelected(pageReceipts[i]),
+                    ),
+                  ],
+                ],
+                if (totalCount > _pageSize) ...[
+                  const Divider(height: 1, color: AppColors.borderLight),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Showing ${start + 1}–$end of $totalCount',
+                            style: AppTypography.sans(
+                              fontSize: 12,
+                              color: AppColors.textMuted,
+                            ),
                           ),
-                        _BillTile(
-                          bill: bills[i],
-                          onTap: () => onBillSelected(bills[i]),
+                        ),
+                        TextButton(
+                          key: const ValueKey('payments_prev_page'),
+                          onPressed: safePage > 0
+                              ? () => setState(() => _page = safePage - 1)
+                              : null,
+                          child: const Text('Prev'),
+                        ),
+                        TextButton(
+                          key: const ValueKey('payments_next_page'),
+                          onPressed: safePage < totalPages - 1
+                              ? () => setState(() => _page = safePage + 1)
+                              : null,
+                          child: const Text('Next'),
                         ),
                       ],
-                    ]
-                  : [
-                      if (receipts.isEmpty)
-                        const EmptyState(
-                          icon: Icons.receipt_long_outlined,
-                          title: 'No payments yet',
-                          message: 'Every payment gets a receipt here.',
-                        ),
-                      for (int i = 0; i < receipts.length; i++) ...[
-                        if (i > 0)
-                          const Divider(
-                            height: 1,
-                            color: AppColors.borderLight,
-                          ),
-                        _ReceiptTile(
-                          receipt: receipts[i],
-                          onTap: () => onReceiptSelected(receipts[i]),
-                        ),
-                      ],
-                    ],
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],

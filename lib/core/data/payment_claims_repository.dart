@@ -16,6 +16,15 @@ abstract interface class PaymentClaimsRepository {
   /// Messages from the last 30 days that still matter to the tenant: waiting
   /// for the manager, or not confirmed. Newest first.
   Future<List<PaymentClaim>> fetchOpen({required String tenancyId});
+
+  /// Updates and resubmits a rejected payment message.
+  Future<PaymentClaim> updateClaim({
+    required String claimId,
+    required String message,
+  });
+
+  /// Deletes a rejected payment message.
+  Future<void> deleteClaim({required String claimId});
 }
 
 class SupabasePaymentClaimsRepository implements PaymentClaimsRepository {
@@ -26,8 +35,8 @@ class SupabasePaymentClaimsRepository implements PaymentClaimsRepository {
 
   SupabaseClient get _sb => client ?? Supabase.instance.client;
 
-  // submit_payment_claim raises these with a message meant for the tenant.
-  static const _refusalCodes = {'22023', '23505', '42501', '54000'};
+  // submit_payment_claim / update_payment_claim raise these with tenant-facing messages.
+  static const _refusalCodes = {'22023', '23505', '42501', '54000', '55000'};
 
   @override
   Future<PaymentClaim> submit({
@@ -49,6 +58,37 @@ class SupabasePaymentClaimsRepository implements PaymentClaimsRepository {
   }
 
   @override
+  Future<PaymentClaim> updateClaim({
+    required String claimId,
+    required String message,
+  }) async {
+    try {
+      final row = await _sb
+          .rpc(
+            'update_payment_claim',
+            params: {'p_claim_id': claimId, 'p_message': message},
+          )
+          .timeout(const Duration(seconds: 15));
+      return claimFromRow((row as Map).cast<String, dynamic>());
+    } on PostgrestException catch (e) {
+      if (_refusalCodes.contains(e.code)) throw PaymentClaimRefused(e.message);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> deleteClaim({required String claimId}) async {
+    try {
+      await _sb
+          .rpc('delete_payment_claim', params: {'p_claim_id': claimId})
+          .timeout(const Duration(seconds: 15));
+    } on PostgrestException catch (e) {
+      if (_refusalCodes.contains(e.code)) throw PaymentClaimRefused(e.message);
+      rethrow;
+    }
+  }
+
+  @override
   Future<List<PaymentClaim>> fetchOpen({required String tenancyId}) async {
     final since = DateTime.now()
         .toUtc()
@@ -56,7 +96,9 @@ class SupabasePaymentClaimsRepository implements PaymentClaimsRepository {
         .toIso8601String();
     final rows = await _sb
         .from('payment_claims')
-        .select('id, status, reference, amount, review_note, created_at')
+        .select(
+          'id, status, message, reference, amount, review_note, created_at',
+        )
         .eq('tenancy_id', tenancyId)
         .neq('status', PaymentClaimStatus.confirmed.wire)
         .gte('created_at', since)
@@ -70,6 +112,7 @@ class SupabasePaymentClaimsRepository implements PaymentClaimsRepository {
     id: row['id'] as String,
     status: PaymentClaimStatus.fromWire(row['status'] as String),
     createdAt: nairobiIso(row['created_at'] as String),
+    message: row['message'] as String?,
     reference: row['reference'] as String?,
     amount: (row['amount'] as num?)?.toInt(),
     reviewNote: row['review_note'] as String?,
@@ -95,9 +138,37 @@ class DemoPaymentClaimsRepository implements PaymentClaimsRepository {
       id: 'demo-${_claims.length + 1}',
       status: PaymentClaimStatus.pending,
       createdAt: '${now.toIso8601String().substring(0, 19)}+03:00',
+      message: message.trim(),
     );
     _claims.insert(0, claim);
     return claim;
+  }
+
+  @override
+  Future<PaymentClaim> updateClaim({
+    required String claimId,
+    required String message,
+  }) async {
+    final validationError = validatePaymentMessage(message);
+    if (validationError != null) {
+      throw PaymentClaimRefused(validationError);
+    }
+    final index = _claims.indexWhere((c) => c.id == claimId);
+    if (index < 0) throw const PaymentClaimRefused('Payment message not found');
+    final now = DateTime.now().toUtc().add(const Duration(hours: 3));
+    final updated = PaymentClaim(
+      id: claimId,
+      status: PaymentClaimStatus.pending,
+      createdAt: '${now.toIso8601String().substring(0, 19)}+03:00',
+      message: message.trim(),
+    );
+    _claims[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<void> deleteClaim({required String claimId}) async {
+    _claims.removeWhere((c) => c.id == claimId);
   }
 
   @override

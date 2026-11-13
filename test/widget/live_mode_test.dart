@@ -179,6 +179,30 @@ class _FakeClaims implements PaymentClaimsRepository {
   @override
   Future<List<PaymentClaim>> fetchOpen({required String tenancyId}) async =>
       List.of(open);
+
+  @override
+  Future<PaymentClaim> updateClaim({
+    required String claimId,
+    required String message,
+  }) async {
+    if (refusal != null) throw PaymentClaimRefused(refusal!);
+    final updated = PaymentClaim(
+      id: claimId,
+      status: PaymentClaimStatus.pending,
+      createdAt: '2026-10-07T10:35:00+03:00',
+      message: message,
+      reference: RegExp(r'^([A-Z0-9]{10}) Confirmed').firstMatch(message)?[1],
+      amount: 18950,
+    );
+    final idx = open.indexWhere((c) => c.id == claimId);
+    if (idx >= 0) open[idx] = updated;
+    return updated;
+  }
+
+  @override
+  Future<void> deleteClaim({required String claimId}) async {
+    open.removeWhere((c) => c.id == claimId);
+  }
 }
 
 class _SignedIn extends AuthNotifier {
@@ -372,6 +396,13 @@ void main() {
       find.text('Not confirmed: No such payment on our statement'),
       findsOneWidget,
     );
+    expect(find.byKey(const ValueKey('claim_edit_c9')), findsOneWidget);
+    expect(find.byKey(const ValueKey('claim_delete_c9')), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const ValueKey('claim_delete_c9')));
+    await tester.tap(find.byKey(const ValueKey('claim_delete_c9')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('payment_claims_card')), findsNothing);
   });
 
   testWidgets('an assigned repair shows who is coming, their number and when', (

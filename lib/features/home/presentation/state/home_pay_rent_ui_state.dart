@@ -11,6 +11,7 @@ class HomePayRentUiState {
     this.isSending = false,
     this.errorText,
     this.sentClaim,
+    this.editingClaimId,
   });
 
   final bool isOpen;
@@ -24,6 +25,11 @@ class HomePayRentUiState {
 
   /// Set once the message reached the manager.
   final PaymentClaim? sentClaim;
+
+  /// Non-null when editing and resubmitting a rejected payment claim.
+  final String? editingClaimId;
+
+  bool get isEditing => editingClaimId != null;
 
   bool get canSend => !isSending && message.trim().isNotEmpty;
 
@@ -39,6 +45,7 @@ class HomePayRentUiState {
       isSending: isSending ?? this.isSending,
       errorText: errorText != null ? errorText() : this.errorText,
       sentClaim: sentClaim != null ? sentClaim() : this.sentClaim,
+      editingClaimId: editingClaimId,
     );
   }
 }

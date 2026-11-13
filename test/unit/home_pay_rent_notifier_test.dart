@@ -17,6 +17,8 @@ class _FakeClaims implements PaymentClaimsRepository {
   final String? refusal;
   final bool fails;
   final sent = <({String tenancyId, String message})>[];
+  final updated = <({String claimId, String message})>[];
+  final deleted = <String>[];
 
   @override
   Future<PaymentClaim> submit({
@@ -44,6 +46,29 @@ class _FakeClaims implements PaymentClaimsRepository {
         createdAt: '2026-11-10T13:40:00+03:00',
       ),
   ];
+
+  @override
+  Future<PaymentClaim> updateClaim({
+    required String claimId,
+    required String message,
+  }) async {
+    if (fails) throw Exception('offline');
+    if (refusal != null) throw PaymentClaimRefused(refusal!);
+    updated.add((claimId: claimId, message: message));
+    return PaymentClaim(
+      id: claimId,
+      status: PaymentClaimStatus.pending,
+      createdAt: '2026-11-10T13:45:00+03:00',
+      message: message,
+      reference: 'UKA1D18L3S',
+      amount: 31200,
+    );
+  }
+
+  @override
+  Future<void> deleteClaim({required String claimId}) async {
+    deleted.add(claimId);
+  }
 }
 
 ProviderContainer _container(_FakeClaims claims) {
@@ -193,6 +218,36 @@ void main() {
 
       expect(claims.sent.single.message, received);
       expect(container.read(homePayRentProvider).errorText, isNull);
+    });
+
+    test('edits and resubmits a rejected payment claim', () async {
+      final claims = _FakeClaims();
+      final container = _container(claims);
+      const rejectedClaim = PaymentClaim(
+        id: 'c-rejected',
+        status: PaymentClaimStatus.rejected,
+        createdAt: '2026-11-10T12:00:00+03:00',
+        message: 'OLD1234567 Confirmed. Ksh100.00 sent to THE PHOENIX',
+        reference: 'OLD1234567',
+        amount: 100,
+        reviewNote: 'Wrong amount',
+      );
+      final notifier = container.read(homePayRentProvider.notifier)
+        ..openPayRentForEdit(rejectedClaim);
+
+      expect(container.read(homePayRentProvider).isEditing, isTrue);
+      expect(
+        container.read(homePayRentProvider).message,
+        rejectedClaim.message,
+      );
+
+      notifier.updateMessage(_message);
+      await notifier.sendMessage();
+
+      expect(claims.sent, isEmpty);
+      expect(claims.updated.single.claimId, 'c-rejected');
+      expect(claims.updated.single.message, _message);
+      expect(container.read(homePayRentProvider).sentClaim?.id, 'c-rejected');
     });
   });
 }
