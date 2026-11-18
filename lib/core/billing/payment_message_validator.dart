@@ -10,6 +10,11 @@ String? validatePaymentMessage(String raw) {
   }
 
   final normalized = trimmed.replaceAll(RegExp(r'\s+'), ' ');
+  // Same wording check as app.check_payment_claim_message on the server.
+  if (!_confirmationWords.hasMatch(normalized)) {
+    return "This doesn't look like a payment confirmation. Paste the message "
+        'you got from M-Pesa or your bank.';
+  }
   final reference = _extractReference(normalized);
   final amount = _extractAmount(normalized);
 
@@ -19,6 +24,11 @@ String? validatePaymentMessage(String raw) {
   }
   return null;
 }
+
+final _confirmationWords = RegExp(
+  r'\b(confirmed|received|sent|paid|successful|completed)\b',
+  caseSensitive: false,
+);
 
 String? _extractReference(String normalized) {
   final labelledRef = RegExp(
