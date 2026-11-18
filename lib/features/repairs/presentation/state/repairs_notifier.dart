@@ -216,14 +216,10 @@ class RepairsNotifier extends Notifier<RepairsUiState> {
                     bytes,
                     fileOptions: const FileOptions(upsert: true),
                   );
-              final photoUrl = Supabase.instance.client.storage
-                  .from('repair-photos')
-                  .getPublicUrl(storagePath);
-              await Supabase.instance.client
-                  .from('repair_tickets')
-                  .update({'photo_url': photoUrl, 'has_photo': true})
-                  .eq('company_id', account.company.id)
-                  .eq('id', record.id);
+              await Supabase.instance.client.rpc(
+                'set_repair_ticket_photo',
+                params: {'p_ticket_id': record.id, 'p_path': storagePath},
+              );
             }
           } catch (_) {
             // Upload failure doesn't block ticket creation
