@@ -90,7 +90,7 @@ class AskNyumbaniPromoCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Find your next home or getaway',
+                          'Home services & weekend stays',
                           style: AppTypography.sans(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -106,7 +106,7 @@ class AskNyumbaniPromoCard extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                'Explore verified houses, apartments, and vacation rentals across East Africa with zero broker fees.',
+                'Book vetted cleaners, handymen, furniture, or weekend getaways on Ask Nyumbani.',
                 style: AppTypography.sans(
                   fontSize: 13,
                   color: AppColors.textSecondary,
@@ -118,7 +118,7 @@ class AskNyumbaniPromoCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Get the app on Google Play',
+                      'Explore Ask Nyumbani',
                       style: AppTypography.sans(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,

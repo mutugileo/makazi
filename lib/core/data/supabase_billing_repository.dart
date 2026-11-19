@@ -27,8 +27,6 @@ String nairobiIso(String timestamptz) {
 class SupabaseBillingRepository {
   SupabaseBillingRepository({this.client});
 
-  static final _isoDate = RegExp(r'^\d{4}-\d{2}-\d{2}$');
-
   /// For tests; the app uses the initialised Supabase client.
   final SupabaseClient? client;
 
@@ -201,15 +199,11 @@ class SupabaseBillingRepository {
           .toInt();
     }
 
-    // Test billing date set by the owner's test button; unset means today.
-    final testAsOf = (companyRow['settings'] as Map?)?['testAsOf'];
-    final asOf = testAsOf is String && _isoDate.hasMatch(testAsOf)
-        ? testAsOf
-        : DateTime.now()
-              .toUtc()
-              .add(const Duration(hours: 3))
-              .toIso8601String()
-              .substring(0, 10);
+    final asOf = DateTime.now()
+        .toUtc()
+        .add(const Duration(hours: 3))
+        .toIso8601String()
+        .substring(0, 10);
 
     return BillingSeed(
       asOf: asOf,
