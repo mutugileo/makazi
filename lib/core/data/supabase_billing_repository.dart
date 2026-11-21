@@ -426,6 +426,7 @@ class SupabaseBillingRepository {
     leaseStart: row['lease_start'] as String,
     leaseEnd: row['lease_end'] as String,
     openingBalance: (row['opening_balance'] as num).toInt(),
+    openingBalanceMonth: row['opening_balance_month'] as String?,
     openingReading: (row['opening_reading'] as num?)?.toInt(),
     moveInRent: (row['move_in_rent'] as num?)?.toInt(),
     moveInGarbage: (row['move_in_garbage'] as num?)?.toInt(),

@@ -800,10 +800,11 @@
       "leaseStart": "2026-08-12",
       "leaseEnd": "2027-08-11",
       "moveInGarbage": 200,
-      "moveInRent": 7742
+      "moveInRent": 7742,
+      "openingBalanceMonth": "2026-08"
     },
     {
-      "openingBalance": 0,
+      "openingBalance": 12000,
       "openingReading": null,
       "moveOut": "2026-08-31",
       "renewal": null,
@@ -820,7 +821,8 @@
       "deposit": 20000,
       "moveIn": "2025-03-01",
       "leaseStart": "2025-03-01",
-      "leaseEnd": "2026-08-31"
+      "leaseEnd": "2026-08-31",
+      "openingBalanceMonth": "2026-08"
     }
   ],
   "meterReadings": {

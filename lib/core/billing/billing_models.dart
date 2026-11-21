@@ -509,6 +509,7 @@ class Tenancy {
     required this.openingBalance,
     required this.openingReading,
     required this.renewal,
+    this.openingBalanceMonth,
     this.moveInRent,
     this.moveInGarbage,
   });
@@ -524,6 +525,7 @@ class Tenancy {
     leaseStart: json['leaseStart'] as String,
     leaseEnd: json['leaseEnd'] as String,
     openingBalance: json['openingBalance'] as int,
+    openingBalanceMonth: json['openingBalanceMonth'] as String?,
     openingReading: json['openingReading'] as int?,
     moveInRent: (json['moveInRent'] as num?)?.toInt(),
     moveInGarbage: (json['moveInGarbage'] as num?)?.toInt(),
@@ -542,6 +544,10 @@ class Tenancy {
   final String leaseStart;
   final String leaseEnd;
   final int openingBalance;
+
+  /// Cycle the opening balance was taken at (a spreadsheet import); billing
+  /// starts here. Null means the company's ledgerStartMonth.
+  final String? openingBalanceMonth;
 
   /// Water meter at move-in; null for tenancies older than the ledger.
   final int? openingReading;

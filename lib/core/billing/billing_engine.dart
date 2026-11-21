@@ -173,10 +173,18 @@ class BillingEngine {
     );
   }
 
+  /// First cycle this tenancy is billed on Makazi. The opening balance covers
+  /// everything before it, so earlier cycles are never charged again.
+  String ledgerStartFor(Tenancy tenancy) {
+    final companyStart = companyOf(tenancy).settings.ledgerStartMonth;
+    final own = tenancy.openingBalanceMonth;
+    return own != null && own.compareTo(companyStart) > 0 ? own : companyStart;
+  }
+
   (String, String)? billingWindow(Tenancy tenancy) {
     final asOfMonth = BillingDates.cycleOf(seed.asOf);
     final moveInMonth = BillingDates.cycleOf(tenancy.moveIn);
-    final start = companyOf(tenancy).settings.ledgerStartMonth;
+    final start = ledgerStartFor(tenancy);
     final first = moveInMonth.compareTo(start) > 0 ? moveInMonth : start;
 
     final unitReadings =
@@ -209,6 +217,7 @@ class BillingEngine {
     final property = propertyOf(tenancy);
     final settings = companyOf(tenancy).settings;
     final moveInMonth = BillingDates.cycleOf(tenancy.moveIn);
+    final ledgerStart = ledgerStartFor(tenancy);
     final finalMonth = tenancy.moveOut == null
         ? null
         : BillingDates.addMonths(BillingDates.cycleOf(tenancy.moveOut!), 1);
@@ -223,8 +232,7 @@ class BillingEngine {
     for (final month in BillingDates.monthsBetween(window.$1, window.$2)) {
       final kind = month == finalMonth
           ? BillKind.finalBill
-          : month == moveInMonth &&
-                moveInMonth.compareTo(settings.ledgerStartMonth) >= 0
+          : month == moveInMonth && moveInMonth.compareTo(ledgerStart) >= 0
           ? BillKind.moveIn
           : BillKind.monthly;
 
