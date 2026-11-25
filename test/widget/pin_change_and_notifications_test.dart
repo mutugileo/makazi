@@ -47,10 +47,7 @@ class _FakeBillingRepository extends SupabaseBillingRepository {
   }
 
   @override
-  Future<BillingSeed> fetchTenantSeed({
-    bool fullHistory = false,
-    int recentMonths = 12,
-  }) async {
+  Future<BillingSeed> fetchTenantSeed() async {
     return BillingSeed.fromJson(
       jsonDecode(kTenantSeedsByPhone[kDefaultTenantPhone]!)
           as Map<String, dynamic>,

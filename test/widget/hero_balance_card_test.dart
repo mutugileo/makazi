@@ -3,21 +3,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:prop_mgt_app/core/billing/billing_models.dart';
 import 'package:prop_mgt_app/features/home/presentation/widgets/hero_balance_card.dart';
 
-MonthlyBill _bill({required int balanceBf}) => MonthlyBill(
-  tenancyId: 'L-1',
-  month: '2027-02',
-  kind: BillKind.monthly,
-  dueDate: '2027-02-04',
-  graceDate: '2027-02-20',
-  lines: const [
-    BillLine(kind: BillLineKind.rent, amount: 90000),
-    BillLine(kind: BillLineKind.garbage, amount: 250),
-  ],
-  water: null,
-  balanceBf: balanceBf,
-  amountPaid: 0,
-  payments: const [],
-);
+MonthlyBill _bill({required int balanceBf, BillKind kind = BillKind.monthly}) =>
+    MonthlyBill(
+      tenancyId: 'L-1',
+      month: '2027-02',
+      kind: kind,
+      dueDate: '2027-02-04',
+      graceDate: '2027-02-20',
+      lines: kind == BillKind.opening
+          ? const []
+          : const [
+              BillLine(kind: BillLineKind.rent, amount: 90000),
+              BillLine(kind: BillLineKind.garbage, amount: 250),
+            ],
+      water: null,
+      balanceBf: balanceBf,
+      amountPaid: 0,
+      payments: const [],
+    );
 
 Future<void> _pump(WidgetTester tester, MonthlyBill bill) => tester.pumpWidget(
   MaterialApp(
@@ -51,5 +54,21 @@ void main() {
   testWidgets('nothing carried in, no extra line', (tester) async {
     await _pump(tester, _bill(balanceBf: 0));
     expect(find.byKey(const ValueKey('hero_carried_balance')), findsNothing);
+  });
+
+  testWidgets(
+    'an uploaded opening credit reads as credit, not double-counted',
+    (tester) async {
+      await _pump(tester, _bill(balanceBf: -25250, kind: BillKind.opening));
+      expect(find.text('KES 25,250 credit'), findsOneWidget);
+      expect(find.text('Opening balance from your landlord'), findsOneWidget);
+      expect(find.textContaining('After '), findsNothing);
+    },
+  );
+
+  testWidgets('an uploaded opening arrears shows once', (tester) async {
+    await _pump(tester, _bill(balanceBf: 31700, kind: BillKind.opening));
+    expect(find.text('Opening balance from your landlord'), findsOneWidget);
+    expect(find.textContaining('Includes'), findsNothing);
   });
 }

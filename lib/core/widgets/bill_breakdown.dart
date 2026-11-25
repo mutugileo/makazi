@@ -50,7 +50,9 @@ class BillBreakdown extends StatelessWidget {
           ),
         if (bill.balanceBf != 0)
           _Row(
-            label: bill.balanceBf > 0
+            label: bill.kind == BillKind.opening
+                ? (bill.balanceBf > 0 ? 'Opening balance' : 'Opening credit')
+                : bill.balanceBf > 0
                 ? 'Arrears from $previousMonth'
                 : 'Credit from $previousMonth',
             value: formatKes(bill.balanceBf),

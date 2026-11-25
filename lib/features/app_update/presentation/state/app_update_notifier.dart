@@ -11,15 +11,14 @@ import 'app_update_ui_state.dart';
 class AppUpdateNotifier extends Notifier<AppUpdateUiState> {
   /// Fallback version metadata when offline or in demo mode.
   /// Live production checks read from `public.app_releases` in Supabase.
-  static const String latestAppVersion = '1.0.11';
-  static const int latestAppBuildNumber = 11;
+  static const String latestAppVersion = '1.0.13';
+  static const int latestAppBuildNumber = 13;
 
   static const List<String> latestReleaseNotes = [
-    'Paste M-Pesa or bank confirmation messages to confirm rent payments faster',
-    'Edit or delete rejected payment confirmation messages',
-    'Paginated bills and payment receipts for faster scrolling',
-    'In-app notification pop-ups for payment confirmations and reminders',
-    'Improved offline connection recovery',
+    "Balances now match your landlord's records exactly",
+    'Your opening balance is shown on its own until the next billing cycle',
+    'Monthly charges start on the 4th of each month',
+    'Full payment history is counted in your balance',
   ];
 
   @override
@@ -34,7 +33,7 @@ class AppUpdateNotifier extends Notifier<AppUpdateUiState> {
         latestBuildNumber: latestAppBuildNumber,
         isUpdateAvailable: false,
         releaseNotes: latestReleaseNotes,
-        releaseDate: '19 Nov 2026',
+        releaseDate: '25 Nov 2026',
         priority: AppUpdatePriority.flexible,
       ),
     );
@@ -66,7 +65,7 @@ class AppUpdateNotifier extends Notifier<AppUpdateUiState> {
     var targetBuild = latestAppBuildNumber;
     var minSupportedBuild = 1;
     var notes = latestReleaseNotes;
-    var releaseDate = '19 Nov 2026';
+    var releaseDate = '25 Nov 2026';
     var storeUrl =
         'https://play.google.com/store/apps/details?id=com.codzure.makazi';
 

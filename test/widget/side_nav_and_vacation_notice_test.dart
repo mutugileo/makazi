@@ -17,10 +17,7 @@ import 'package:prop_mgt_app/features/app_update/presentation/widgets/app_update
 
 class _FakeBillingRepoForSideNav extends SupabaseBillingRepository {
   @override
-  Future<BillingSeed> fetchTenantSeed({
-    bool fullHistory = false,
-    int recentMonths = 12,
-  }) async {
+  Future<BillingSeed> fetchTenantSeed() async {
     return BillingSeed.fromJson(
       jsonDecode(kTenantSeedsByPhone[kDefaultTenantPhone]!)
           as Map<String, dynamic>,

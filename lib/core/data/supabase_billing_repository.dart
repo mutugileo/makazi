@@ -35,27 +35,14 @@ class SupabaseBillingRepository {
   /// The tenant's [BillingSeed]: one company, property, unit and tenancy.
   /// Throws [NoTenancyFound] when there is nothing to show, and the
   /// underlying error when the database can't be reached.
-  ///
-  /// For mature tenancies older than 12 months, payments are paginated to the
-  /// last [recentMonths] (default 12) by default to prevent large payloads.
-  /// Pass [fullHistory] = true to fetch the entire historical ledger.
-  Future<BillingSeed> fetchTenantSeed({
-    bool fullHistory = false,
-    int recentMonths = 12,
-  }) async {
-    return _fetchTenantSeedInternal(
-      fullHistory: fullHistory,
-      recentMonths: recentMonths,
-    ).timeout(
+  Future<BillingSeed> fetchTenantSeed() async {
+    return _fetchTenantSeedInternal().timeout(
       const Duration(seconds: 10),
       onTimeout: () => throw TimeoutException('Connection timed out'),
     );
   }
 
-  Future<BillingSeed> _fetchTenantSeedInternal({
-    bool fullHistory = false,
-    int recentMonths = 12,
-  }) async {
+  Future<BillingSeed> _fetchTenantSeedInternal() async {
     final sb = _sb;
     final userId = sb.auth.currentUser?.id;
     if (userId == null) throw const NoTenancyFound();
@@ -103,30 +90,14 @@ class SupabaseBillingRepository {
       (t) => t['id'] == tenancyRow['tenant_id'] && t['company_id'] == companyId,
     );
 
-    // Optimize ledger query for mature tenancies (> 12 months)
-    final moveInDateStr = tenancyRow['move_in'] as String;
-    final now = DateTime.now();
-    final moveInDate = DateTime.tryParse(moveInDateStr) ?? now;
-    final isMatureTenancy = now.difference(moveInDate).inDays > 365;
-
-    final cutoffDate = (fullHistory || !isMatureTenancy)
-        ? null
-        : DateTime(
-            now.year,
-            now.month - recentMonths,
-            1,
-          ).toIso8601String().substring(0, 10);
-
-    var paymentsFilter = sb
+    // Every payment: the balance is a running total from the first bill, so
+    // dropping old payments would quietly inflate arrears.
+    final paymentsFuture = sb
         .from('payments')
         .select()
         .eq('company_id', companyId)
-        .eq('tenancy_id', tenancyId);
-
-    if (cutoffDate != null) {
-      paymentsFilter = paymentsFilter.gte('date', cutoffDate);
-    }
-    final paymentsFuture = paymentsFilter.order('date', ascending: false);
+        .eq('tenancy_id', tenancyId)
+        .order('date', ascending: false);
 
     // Fetch company, unit (with embedded property & staff), payments, meter readings,
     // repair tickets, and messages concurrently.

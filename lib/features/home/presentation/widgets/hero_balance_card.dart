@@ -161,10 +161,15 @@ class HeroBalanceCard extends StatelessWidget {
                         ),
                       ),
                       // What came in from earlier bills: arrears owed, or
-                      // credit already taken off this bill.
-                      if (bill != null && bill.balanceBf != 0)
+                      // credit already taken off this bill. An opening bill
+                      // is nothing but that balance, so it is named instead.
+                      if (bill != null &&
+                          (bill.balanceBf != 0 ||
+                              bill.kind == BillKind.opening))
                         Text(
-                          bill.balanceBf > 0
+                          bill.kind == BillKind.opening
+                              ? 'Opening balance from your landlord'
+                              : bill.balanceBf > 0
                               ? 'Includes ${formatKes(bill.balanceBf)} arrears'
                               : 'After ${formatKes(-bill.balanceBf)} credit',
                           key: const ValueKey('hero_carried_balance'),

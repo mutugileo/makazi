@@ -78,25 +78,29 @@ void main() {
       );
     });
 
-    test('an unreadable build number counts as build 0', () async {
-      PackageInfo.setMockInitialValues(
-        appName: 'Makazi',
-        packageName: 'com.codzure.makazi',
-        version: '',
-        buildNumber: 'not-a-number',
-        buildSignature: '',
-      );
-      final container = _container();
+    test(
+      'an unreadable build number is never offered or forced an update',
+      () async {
+        PackageInfo.setMockInitialValues(
+          appName: 'Makazi',
+          packageName: 'com.codzure.makazi',
+          version: '',
+          buildNumber: 'not-a-number',
+          buildSignature: '',
+        );
+        final container = _container();
 
-      await container.read(appUpdateProvider.notifier).checkForUpdates();
+        await container.read(appUpdateProvider.notifier).checkForUpdates();
 
-      final state = container.read(appUpdateProvider);
-      expect(state.isChecking, isFalse);
-      // An unreadable build number counts as build 0, so it is offered the
-      // update; the version itself is still what the device reports.
-      expect(state.updateInfo.currentBuildNumber, 0);
-      expect(state.isUpdateAvailable, isTrue);
-    });
+        final state = container.read(appUpdateProvider);
+        expect(state.isChecking, isFalse);
+        // An unreadable build number counts as build 0. Without a real build to
+        // compare, the app neither nags nor locks the user out.
+        expect(state.updateInfo.currentBuildNumber, 0);
+        expect(state.isUpdateAvailable, isFalse);
+        expect(state.updateInfo.isForceUpdate, isFalse);
+      },
+    );
 
     test('dismissUpdateNotice and resetDismissedNotice toggle flag', () {
       _installed('1.0.3', '3');

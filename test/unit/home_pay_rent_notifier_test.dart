@@ -185,7 +185,10 @@ void main() {
       final state = container.read(homePayRentProvider);
       expect(state.sentClaim, isNull);
       expect(state.isSending, isFalse);
-      expect(state.errorText, contains("doesn't look like a payment confirmation"));
+      expect(
+        state.errorText,
+        contains("doesn't look like a payment confirmation"),
+      );
     });
 
     test('rejects a short message without calling the repository', () async {
