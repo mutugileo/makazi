@@ -1,6 +1,7 @@
 import 'package:prop_mgt_app/core/theme/brand_colors.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/billing/billing_engine.dart';
+import '../../../../core/billing/billing_models.dart';
 import '../../../../core/services/pdf_document_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -52,7 +53,11 @@ class StatementView extends StatelessWidget {
         children: [
           Text(title.toUpperCase(), style: label()),
           const SizedBox(height: 2),
-          Text(amount, style: value().copyWith(color: color)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(amount, style: value().copyWith(color: color)),
+          ),
         ],
       ),
     );
@@ -165,12 +170,32 @@ class StatementView extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        BillingDates.monthLabel(b.month),
-                        style: AppTypography.sans(
-                          fontSize: 13,
-                          color: AppColors.textPrimary,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${BillingDates.monthLabel(b.month)}${switch (b.kind) {
+                              BillKind.opening => ' · Opening balance',
+                              BillKind.moveIn => ' · Move-in',
+                              BillKind.finalBill => ' · Final',
+                              BillKind.monthly => '',
+                            }}',
+                            style: AppTypography.sans(
+                              fontSize: 13,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          if (b.balanceBf != 0)
+                            Text(
+                              b.balanceBf > 0
+                                  ? 'incl. ${formatKes(b.balanceBf)} arrears'
+                                  : 'after ${formatKes(-b.balanceBf)} credit',
+                              style: AppTypography.sans(
+                                fontSize: 11,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     // Two lines so long amounts fit a phone width.

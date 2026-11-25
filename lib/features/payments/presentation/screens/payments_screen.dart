@@ -157,6 +157,10 @@ class _PaymentsListViewState extends State<_PaymentsListView> {
         ? receipts.sublist(start, end)
         : const <PaymentReceipt>[];
 
+    final effectiveStartMonth = account.bills.isNotEmpty
+        ? account.bills.first.month
+        : account.company.settings.ledgerStartMonth;
+
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.md,
@@ -182,7 +186,7 @@ class _PaymentsListViewState extends State<_PaymentsListView> {
               Expanded(
                 child: _StatCard(
                   title:
-                      'Paid since ${BillingDates.shortMonth(account.company.settings.ledgerStartMonth)}',
+                      'Paid since ${BillingDates.shortMonth(effectiveStartMonth)}',
                   amount: formatKes(account.totalPaid),
                 ),
               ),
@@ -458,7 +462,11 @@ class _BillTile extends StatelessWidget {
       BillKind.monthly => '',
     };
     final subtitle = bill.outstanding > 0
-        ? 'Outstanding ${formatKes(bill.outstanding)}'
+        ? (bill.amountPaid > 0
+              ? 'Paid ${formatKes(bill.amountPaid)} · Bal ${formatKes(bill.outstanding)}'
+              : 'Outstanding ${formatKes(bill.outstanding)}')
+        : bill.amountPaid > 0 && bill.datePaid != null
+        ? 'Paid ${formatKes(bill.amountPaid)} · ${BillingDates.formatDayMonth(bill.datePaid!)}'
         : bill.datePaid != null
         ? 'Paid ${BillingDates.formatDayMonth(bill.datePaid!)}'
         : 'Nothing to pay';

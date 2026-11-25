@@ -151,13 +151,17 @@ class HeroBalanceCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      Text(
-                        formatKes(amountDue),
-                        style: AppTypography.editorialSerif(
-                          fontSize: 44,
-                          color: effectiveOnPrimary,
-                          fontWeight: FontWeight.w400,
-                          letterSpacing: -0.5,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          formatKes(amountDue),
+                          style: AppTypography.editorialSerif(
+                            fontSize: 44,
+                            color: effectiveOnPrimary,
+                            fontWeight: FontWeight.w400,
+                            letterSpacing: -0.5,
+                          ),
                         ),
                       ),
                       // What came in from earlier bills: arrears owed, or
