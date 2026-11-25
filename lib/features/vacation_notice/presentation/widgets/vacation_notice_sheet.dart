@@ -137,12 +137,15 @@ class VacationNoticeSheet extends ConsumerWidget {
                     ? _ActiveNoticeView(
                         notice: state.activeNotice!,
                         primaryColor: companyTheme.primaryColor,
-                        onWithdraw: () {
-                          notifier.withdrawNotice();
-                          ScaffoldMessenger.of(context).showSnackBar(
+                        onWithdraw: () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          final withdrawn = await notifier.withdrawNotice();
+                          messenger.showSnackBar(
                             SnackBar(
                               content: Text(
-                                'Vacation notice withdrawn',
+                                withdrawn
+                                    ? 'Your manager has been told the notice is withdrawn'
+                                    : "Couldn't reach your manager. Check your connection and try again.",
                                 style: AppTypography.sans(
                                   fontSize: 14,
                                   color: AppColors.pureWhite,
@@ -223,7 +226,7 @@ class _ActiveNoticeView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Notice Registered',
+                      'Notice sent to your manager',
                       style: AppTypography.sans(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -231,7 +234,7 @@ class _ActiveNoticeView extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'Reference: ${notice.id}',
+                      'Your manager will confirm the inspection date in Messages.',
                       style: AppTypography.sans(
                         fontSize: 12,
                         color: AppColors.statusPaidText,
@@ -313,32 +316,13 @@ class _ActiveNoticeView extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.statusPaidBackground,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      'Deposit Protected',
-                      style: AppTypography.sans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.statusPaidText,
-                      ),
-                    ),
-                  ),
                 ],
               ),
               const SizedBox(height: 12),
               const _RequirementChecklistRow(
                 isDone: true,
-                title: '1. 30-Day Notice Registered',
-                subtitle:
-                    'Notice submitted and logged with property management',
+                title: '1. Notice sent',
+                subtitle: 'Sent to your property manager in Messages',
               ),
               const SizedBox(height: 10),
               _RequirementChecklistRow(

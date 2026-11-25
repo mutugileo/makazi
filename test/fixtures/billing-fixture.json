@@ -833,7 +833,8 @@
       "2026-07": 861,
       "2026-08": 877,
       "2026-09": 896,
-      "2026-10": 915
+      "2026-10": 915,
+      "2027-01": 990
     },
     "kh-a12": {
       "2026-04": 616,
@@ -1858,6 +1859,24 @@
       "time": "13:00",
       "method": "Bank",
       "reference": "FT2610048116"
+    },
+    {
+      "receiptNumber": "RCT-2609-0901",
+      "tenancyId": "SV-105",
+      "amount": 3000,
+      "date": "2026-09-10",
+      "time": "10:00",
+      "method": "M-Pesa",
+      "reference": "FIXFINAL01"
+    },
+    {
+      "receiptNumber": "RCT-2610-0902",
+      "tenancyId": "SV-105",
+      "amount": 1500,
+      "date": "2026-10-05",
+      "time": "11:00",
+      "method": "M-Pesa",
+      "reference": "FIXAFTER01"
     }
   ],
   "staff": [

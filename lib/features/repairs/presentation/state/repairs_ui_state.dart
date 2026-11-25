@@ -12,6 +12,7 @@ class RepairsUiState {
     this.attachedPhotoPath,
     this.isSubmitting = false,
     this.newlyCreatedTicket,
+    this.photoUploadFailed = false,
     this.submitError,
   });
 
@@ -23,6 +24,7 @@ class RepairsUiState {
       attachedPhotoPath = null,
       isSubmitting = false,
       newlyCreatedTicket = null,
+      photoUploadFailed = false,
       submitError = null;
 
   final List<RepairTicket> tickets;
@@ -33,6 +35,9 @@ class RepairsUiState {
   final String? attachedPhotoPath;
   final bool isSubmitting;
   final RepairTicket? newlyCreatedTicket;
+
+  /// The request was saved but its photo didn't upload; the tenant is told.
+  final bool photoUploadFailed;
 
   /// Set when the request couldn't be saved; the form stays open.
   final String? submitError;
@@ -53,6 +58,7 @@ class RepairsUiState {
     ValueGetter<String?>? attachedPhotoPath,
     bool? isSubmitting,
     ValueGetter<RepairTicket?>? newlyCreatedTicket,
+    bool? photoUploadFailed,
     ValueGetter<String?>? submitError,
   }) {
     return RepairsUiState(
@@ -70,6 +76,7 @@ class RepairsUiState {
       newlyCreatedTicket: newlyCreatedTicket != null
           ? newlyCreatedTicket()
           : this.newlyCreatedTicket,
+      photoUploadFailed: photoUploadFailed ?? this.photoUploadFailed,
       submitError: submitError != null ? submitError() : this.submitError,
     );
   }
@@ -86,6 +93,7 @@ class RepairsUiState {
         other.attachedPhotoPath == attachedPhotoPath &&
         other.isSubmitting == isSubmitting &&
         other.newlyCreatedTicket == newlyCreatedTicket &&
+        other.photoUploadFailed == photoUploadFailed &&
         other.submitError == submitError;
   }
 
@@ -99,6 +107,7 @@ class RepairsUiState {
     attachedPhotoPath,
     isSubmitting,
     newlyCreatedTicket,
+    photoUploadFailed,
     submitError,
   );
 }

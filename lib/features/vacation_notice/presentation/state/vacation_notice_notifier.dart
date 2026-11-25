@@ -168,12 +168,35 @@ class VacationNoticeNotifier extends Notifier<VacationNoticeUiState> {
     return true;
   }
 
-  void withdrawNotice() {
+  /// Tells the manager first; the notice is only cleared once that message
+  /// is sent, so the tenant never believes a withdrawal nobody received.
+  Future<bool> withdrawNotice() async {
+    final notice = state.activeNotice;
+    if (notice == null) return true;
+    if (ref.read(liveDataProvider)) {
+      final account = ref.read(tenantAccountProvider);
+      try {
+        await ref
+            .read(supabaseBillingRepositoryProvider)
+            .sendMessage(
+              companyId: account.company.id,
+              tenancyId: account.tenancy.id,
+              body:
+                  '[Vacation Notice] Withdrawn by ${account.tenant.name} '
+                  '(${account.unitTitle}). The notice to vacate on '
+                  '${notice.vacatingDate} no longer stands.',
+            );
+      } catch (_) {
+        return false;
+      }
+    }
+    if (!ref.mounted) return false;
     state = state.copyWith(
       activeNotice: () => null,
       isSuccess: false,
       submitError: () => null,
     );
+    return true;
   }
 
   void resetSuccess() {

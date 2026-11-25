@@ -31,7 +31,9 @@ class RepairsScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Request ${next.newlyCreatedTicket!.id} submitted',
+              next.photoUploadFailed
+                  ? "Request ${next.newlyCreatedTicket!.id} sent, but the photo didn't upload. Send it to your manager in Messages."
+                  : 'Request ${next.newlyCreatedTicket!.id} submitted',
               style: AppTypography.sans(
                 fontSize: 14,
                 color: AppColors.pureWhite,
@@ -43,7 +45,7 @@ class RepairsScreen extends ConsumerWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            duration: const Duration(seconds: 3),
+            duration: Duration(seconds: next.photoUploadFailed ? 6 : 3),
           ),
         );
         notifier.dismissNewlyCreatedTicketFeedback();

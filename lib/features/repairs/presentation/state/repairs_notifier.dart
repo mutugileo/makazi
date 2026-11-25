@@ -182,7 +182,8 @@ class RepairsNotifier extends Notifier<RepairsUiState> {
     final hasPhoto = state.hasPhoto;
     final photoPath = state.attachedPhotoPath;
 
-    final RepairTicket newTicket;
+    RepairTicket newTicket;
+    var photoUploadFailed = false;
     if (ref.read(liveDataProvider)) {
       final account = ref.read(tenantAccountProvider);
       try {
@@ -195,14 +196,18 @@ class RepairsNotifier extends Notifier<RepairsUiState> {
               category: category.name,
               title: title,
               description: text,
-              hasPhoto: hasPhoto,
+              // Marked by set_repair_ticket_photo once the upload succeeds, so a
+              // failed upload never leaves a ticket claiming a photo.
+              hasPhoto: false,
             );
         newTicket = repairTicketFromRecord(record);
 
         if (photoPath != null) {
           try {
             final file = File(photoPath);
-            if (await file.exists()) {
+            if (!await file.exists()) {
+              photoUploadFailed = true;
+            } else {
               final bytes = await file.readAsBytes();
               final ext = photoPath.contains('.')
                   ? photoPath.split('.').last
@@ -220,9 +225,13 @@ class RepairsNotifier extends Notifier<RepairsUiState> {
                 'set_repair_ticket_photo',
                 params: {'p_ticket_id': record.id, 'p_path': storagePath},
               );
+              newTicket = repairTicketFromRecord(
+                record,
+              ).copyWith(hasPhoto: true);
             }
           } catch (_) {
-            // Upload failure doesn't block ticket creation
+            // The request is saved; the tenant is told the photo didn't go.
+            photoUploadFailed = true;
           }
         }
       } catch (_) {
@@ -257,6 +266,7 @@ class RepairsNotifier extends Notifier<RepairsUiState> {
       description: '',
       attachedPhotoCount: 0,
       newlyCreatedTicket: () => newTicket,
+      photoUploadFailed: photoUploadFailed,
     );
     if (ref.read(liveDataProvider)) {
       await ref.read(tenantAccountProvider.notifier).refreshFromDatabase();

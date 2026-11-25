@@ -1829,14 +1829,14 @@
       "garbage": 0,
       "deposit": 0,
       "depositApplied": -20000,
-      "depositRefund": 54280,
+      "depositRefund": 58780,
       "balanceBf": -37280,
-      "newCharges": 37280,
-      "totalDue": 0,
-      "amountPaid": 0,
+      "newCharges": 41780,
+      "totalDue": 4500,
+      "amountPaid": 4500,
       "outstanding": 0,
       "status": "Paid",
-      "datePaid": null
+      "datePaid": "2026-10-05"
     }
   ]
 }

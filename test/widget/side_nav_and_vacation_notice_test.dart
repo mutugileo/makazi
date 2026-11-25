@@ -176,10 +176,12 @@ void main() {
       await tester.pumpAndSettle();
 
       // Now active notice view shows requirements checklist
-      expect(find.text('Notice Registered'), findsOneWidget);
+      expect(find.text('Notice sent to your manager'), findsOneWidget);
       expect(find.text('Vacating Requirements & Checklist'), findsOneWidget);
-      expect(find.text('Deposit Protected'), findsOneWidget);
-      expect(find.text('1. 30-Day Notice Registered'), findsOneWidget);
+      // Nothing the app can't back with data: no made-up reference or badge.
+      expect(find.text('Deposit Protected'), findsNothing);
+      expect(find.textContaining('Reference: VN-'), findsNothing);
+      expect(find.text('1. Notice sent'), findsOneWidget);
       expect(find.text('Reason Stated'), findsOneWidget);
       expect(find.text('Need Bigger Space'), findsOneWidget);
       expect(

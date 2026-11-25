@@ -187,14 +187,13 @@ class BillingEngine {
     final start = ledgerStartFor(tenancy);
     final first = moveInMonth.compareTo(start) > 0 ? moveInMonth : start;
 
-    final unitReadings =
-        seed.meterReadings[tenancy.unitId]?.keys.toList() ?? const <String>[];
+    // Billing never runs ahead of today's cycle: a reading or payment dated in
+    // a future month must not charge rent for months that haven't started.
     final tenancyPayments = seed.payments
         .where((p) => p.tenancyId == tenancy.id)
         .map((p) => BillingDates.cycleOf(p.date))
         .toList();
-    final candidates = [asOfMonth, ...unitReadings, ...tenancyPayments]..sort();
-    final maxActive = candidates.last;
+    final maxActive = asOfMonth;
 
     final finalMonth = tenancy.moveOut == null
         ? maxActive
@@ -243,6 +242,20 @@ class BillingEngine {
                 moveInMonth.compareTo(ledgerStart) >= 0
           ? BillKind.moveIn
           : BillKind.monthly;
+
+      // A payment counts towards the cycle it was made in; payments made
+      // before the first bill count towards it, and payments after a former
+      // tenant's last bill count towards that last bill.
+      final isLastOfFormer = tenancy.moveOut != null && month == window.$2;
+      final monthPayments = payments
+          .where((p) {
+            final paidIn = BillingDates.cycleOf(p.date);
+            return paidIn == month ||
+                (month == window.$1 && paidIn.compareTo(month) < 0) ||
+                (isLastOfFormer && paidIn.compareTo(month) > 0);
+          })
+          .toList(growable: false);
+      final amountPaid = monthPayments.fold(0, (sum, p) => sum + p.amount);
 
       final lines = <BillLine>[];
       WaterUsage? water;
@@ -311,8 +324,9 @@ class BillingEngine {
               amount: -tenancy.deposit,
             ),
           );
+          // Payments in the final cycle count too: the refund is what is over.
           final afterDeposit =
-              balanceBf + (water?.amount ?? 0) - tenancy.deposit;
+              balanceBf + (water?.amount ?? 0) - tenancy.deposit - amountPaid;
           if (afterDeposit < 0) {
             lines.add(
               BillLine(kind: BillLineKind.depositRefund, amount: -afterDeposit),
@@ -320,15 +334,6 @@ class BillingEngine {
           }
       }
 
-      // A payment counts towards the cycle it was made in; payments made
-      // before the first bill count towards it.
-      final monthPayments = payments
-          .where((p) {
-            final paidIn = BillingDates.cycleOf(p.date);
-            return paidIn == month ||
-                (month == window.$1 && paidIn.compareTo(month) < 0);
-          })
-          .toList(growable: false);
       final bill = MonthlyBill(
         tenancyId: tenancy.id,
         month: month,
@@ -338,7 +343,7 @@ class BillingEngine {
         lines: List.unmodifiable(lines),
         water: water,
         balanceBf: balanceBf,
-        amountPaid: monthPayments.fold(0, (sum, p) => sum + p.amount),
+        amountPaid: amountPaid,
         payments: monthPayments,
       );
       bills.add(bill);
