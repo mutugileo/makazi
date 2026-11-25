@@ -28,8 +28,11 @@ class BillDetailView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final kindNote = switch (bill.kind) {
+      BillKind.opening =>
+        'Your balance when your landlord moved your account to Makazi. '
+            'Monthly charges start from the next cycle.',
       BillKind.moveIn =>
-        'Your first bill: deposit, plus rent for the days left in the month. '
+        'Your first bill: deposit and move-in rent set by your landlord. '
             'Water is billed from next month.',
       BillKind.finalBill =>
         'Final bill after moving out: last water reading, deposit applied.',

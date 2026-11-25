@@ -18,6 +18,7 @@ class CurrentBillCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final monthName = BillingDates.monthLabel(bill.month).split(' ').first;
     final title = switch (bill.kind) {
+      BillKind.opening => 'Opening balance',
       BillKind.moveIn => 'Move-in bill',
       BillKind.finalBill => 'Final bill',
       BillKind.monthly => '$monthName bill',

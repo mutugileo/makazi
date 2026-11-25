@@ -452,6 +452,7 @@ class _BillTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final kindLabel = switch (bill.kind) {
+      BillKind.opening => ' · Opening balance',
       BillKind.moveIn => ' · Move-in',
       BillKind.finalBill => ' · Final',
       BillKind.monthly => '',

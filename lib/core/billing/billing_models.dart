@@ -27,6 +27,7 @@ enum PaymentMethod {
 }
 
 enum BillKind {
+  opening('opening'),
   moveIn('move-in'),
   monthly('monthly'),
   finalBill('final');

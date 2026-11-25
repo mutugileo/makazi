@@ -230,9 +230,17 @@ class BillingEngine {
     var balanceBf = tenancy.openingBalance;
 
     for (final month in BillingDates.monthsBetween(window.$1, window.$2)) {
+      // An uploaded tenancy's first cycle carries only the sheet's balance: it
+      // is what the tenant owed that day, so this cycle's rent, deposit and
+      // move-in rent are already in it. Charges start the next cycle.
+      final imported = tenancy.openingBalanceMonth != null;
       final kind = month == finalMonth
           ? BillKind.finalBill
-          : month == moveInMonth && moveInMonth.compareTo(ledgerStart) >= 0
+          : imported && month == ledgerStart
+          ? BillKind.opening
+          : !imported &&
+                month == moveInMonth &&
+                moveInMonth.compareTo(ledgerStart) >= 0
           ? BillKind.moveIn
           : BillKind.monthly;
 
@@ -241,6 +249,8 @@ class BillingEngine {
       final rates = property.ratesFor(month);
 
       switch (kind) {
+        case BillKind.opening:
+          break;
         case BillKind.moveIn:
           lines
             ..add(BillLine(kind: BillLineKind.deposit, amount: tenancy.deposit))
@@ -342,6 +352,7 @@ class BillingEngine {
   String receiptDescription(MonthlyBill bill, Payment payment) {
     final label = BillingDates.monthLabel(bill.month);
     final base = switch (bill.kind) {
+      BillKind.opening => 'Opening balance, $label',
       BillKind.moveIn => 'Move-in bill, $label',
       BillKind.finalBill => 'Final bill, $label',
       BillKind.monthly => 'Bill, $label',
