@@ -246,13 +246,21 @@ class _PaymentDetailsState extends State<_PaymentDetails> {
   Widget build(BuildContext context) {
     final account = widget.account;
     final pesalink = account.effectivePesalinkPhone;
-    final rows = [
-      ('Paybill', account.effectiveMpesaPaybill),
-      ('Account', account.accountNumber),
-      ('Bank', account.effectiveBankName),
-      ('Bank account', account.effectiveBankAccount),
-      if (pesalink != null) ('PesaLink phone', pesalink),
-    ];
+    final rows = account.usesFixedPaybillAccount
+        ? [
+            ('Paybill', account.effectiveMpesaPaybill),
+            ('Account number', account.effectiveBankAccount),
+            if (account.effectiveBankName.isNotEmpty)
+              ('Account name', account.effectiveBankName),
+            if (pesalink != null) ('PesaLink phone', pesalink),
+          ]
+        : [
+            ('Paybill', account.effectiveMpesaPaybill),
+            ('Account', account.accountNumber),
+            ('Bank', account.effectiveBankName),
+            ('Bank account', account.effectiveBankAccount),
+            if (pesalink != null) ('PesaLink phone', pesalink),
+          ];
 
     return Container(
       key: const ValueKey('pay_rent_details'),

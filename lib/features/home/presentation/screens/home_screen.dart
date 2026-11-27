@@ -363,7 +363,9 @@ class _HomeDashboardView extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Vacation notice & move-out inspection',
+                            updateState.updateInfo.releaseNotes.isNotEmpty
+                                ? updateState.updateInfo.releaseNotes.first
+                                : 'Tap to install the latest release',
                             style: AppTypography.sans(
                               fontSize: 12,
                               color: AppColors.textMuted,

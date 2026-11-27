@@ -161,6 +161,7 @@ class PropertyPaymentDetail {
     this.pesalinkPhone,
     this.pesalinkPaybill,
     this.pesalinkNotes,
+    this.paybillAccountMode,
   });
 
   factory PropertyPaymentDetail.fromJson(Map<String, dynamic> json) =>
@@ -171,6 +172,7 @@ class PropertyPaymentDetail {
         pesalinkPhone: json['pesalinkPhone'] as String?,
         pesalinkPaybill: json['pesalinkPaybill'] as String?,
         pesalinkNotes: json['pesalinkNotes'] as String?,
+        paybillAccountMode: json['paybillAccountMode'] as String?,
       );
 
   final String? mpesaPaybill;
@@ -179,6 +181,7 @@ class PropertyPaymentDetail {
   final String? pesalinkPhone;
   final String? pesalinkPaybill;
   final String? pesalinkNotes;
+  final String? paybillAccountMode;
 }
 
 class CompanySettings {
@@ -190,6 +193,7 @@ class CompanySettings {
     required this.recordRetentionMonths,
     this.theme = const CompanyTheme(),
     this.pesalinkPhone,
+    this.paybillAccountMode = 'unit',
     this.propertyPayments = const {},
   });
 
@@ -206,6 +210,9 @@ class CompanySettings {
             ? CompanyTheme.fromJson(json['theme'] as Map<String, dynamic>)
             : const CompanyTheme(),
         pesalinkPhone: json['pesalinkPhone'] as String?,
+        paybillAccountMode: (json['paybillAccountMode'] as String?) == 'bank'
+            ? 'bank'
+            : 'unit',
         propertyPayments:
             json['propertyPayments'] != null &&
                 json['propertyPayments'] is Map<String, dynamic>
@@ -232,6 +239,10 @@ class CompanySettings {
 
   /// Default company-wide PesaLink phone or alias.
   final String? pesalinkPhone;
+
+  /// 'unit' uses unit code (e.g. RC-5A) as Paybill account; 'bank' uses the
+  /// fixed bank/collection account number and name across all units.
+  final String paybillAccountMode;
 
   /// Per-property payment configuration overrides.
   final Map<String, PropertyPaymentDetail> propertyPayments;

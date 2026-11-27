@@ -116,6 +116,19 @@ class TenantAccountState {
     return company.bankAccount;
   }
 
+  /// True when tenants pay via a shared bank/collection Paybill using a single
+  /// fixed account number instead of per-unit codes.
+  bool get usesFixedPaybillAccount {
+    final propMode =
+        company.settings.propertyPayments[property.id]?.paybillAccountMode;
+    final mode = propMode ?? company.settings.paybillAccountMode;
+    return mode == 'bank' && effectiveBankAccount.isNotEmpty;
+  }
+
+  /// Account number tenants enter on M-Pesa Paybill.
+  String get effectivePaybillAccountNumber =>
+      usesFixedPaybillAccount ? effectiveBankAccount : accountNumber;
+
   /// Effective PesaLink phone: prefers apartment override if present,
   /// falling back to the company default.
   String? get effectivePesalinkPhone {

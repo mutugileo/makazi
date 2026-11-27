@@ -6,7 +6,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../billing/presentation/state/tenant_account_providers.dart';
 import '../state/app_update_providers.dart';
 
-class AppUpdateSheet extends ConsumerWidget {
+class AppUpdateSheet extends ConsumerStatefulWidget {
   const AppUpdateSheet({super.key});
 
   static Future<void> show(BuildContext context) {
@@ -19,7 +19,24 @@ class AppUpdateSheet extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AppUpdateSheet> createState() => _AppUpdateSheetState();
+}
+
+class _AppUpdateSheetState extends ConsumerState<AppUpdateSheet> {
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.microtask(() {
+      if (!mounted) return;
+      final state = ref.read(appUpdateProvider);
+      if (!state.isChecking && !state.isUpdateAvailable) {
+        ref.read(appUpdateProvider.notifier).checkForUpdates();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(appUpdateProvider);
     final notifier = ref.read(appUpdateProvider.notifier);
     final account = ref.watch(tenantAccountProvider);
@@ -292,6 +309,108 @@ class AppUpdateSheet extends ConsumerWidget {
                     ],
                   ),
                 ],
+              ] else if (state.isChecking) ...[
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: AppColors.pageBackground,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.borderLight),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: companyTheme.primaryColor.withValues(
+                            alpha: 0.12,
+                          ),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.system_update_rounded,
+                          color: companyTheme.primaryColor,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Checking for updates…',
+                        style: AppTypography.sans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Checking the latest Makazi release',
+                        style: AppTypography.sans(
+                          fontSize: 13,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else if (state.errorMessage != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: AppColors.statusUnpaidBackground,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.statusUnpaidBorder),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.wifi_off_rounded,
+                        color: AppColors.statusUnpaidText,
+                        size: 36,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Update check failed',
+                        style: AppTypography.sans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.statusUnpaidText,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        state.errorMessage!,
+                        textAlign: TextAlign.center,
+                        style: AppTypography.sans(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                ElevatedButton(
+                  onPressed: () =>
+                      notifier.checkForUpdates(userInitiated: true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: companyTheme.primaryColor,
+                    foregroundColor: companyTheme.onPrimaryColor,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: Text(
+                    'Try again',
+                    style: AppTypography.sans(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: companyTheme.onPrimaryColor,
+                    ),
+                  ),
+                ),
               ] else ...[
                 // Up to date view
                 Container(
@@ -329,24 +448,52 @@ class AppUpdateSheet extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: companyTheme.primaryColor,
-                    foregroundColor: AppColors.pureWhite,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () =>
+                            notifier.checkForUpdates(userInitiated: true),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: const BorderSide(color: AppColors.borderStrong),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: Text(
+                          'Check again',
+                          style: AppTypography.sans(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                  child: Text(
-                    'Done',
-                    style: AppTypography.sans(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.pureWhite,
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: companyTheme.primaryColor,
+                          foregroundColor: AppColors.pureWhite,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: Text(
+                          'Done',
+                          style: AppTypography.sans(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.pureWhite,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ],

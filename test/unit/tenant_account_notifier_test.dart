@@ -165,8 +165,58 @@ void main() {
         expect(account.effectiveMpesaPaybill, '999888');
         expect(account.effectiveBankName, 'KCB Bank, Upper Hill');
         expect(account.effectiveBankAccount, '1234567890');
+        expect(account.usesFixedPaybillAccount, isFalse);
+        expect(account.effectivePaybillAccountNumber, account.accountNumber);
       },
     );
+
+    test('fixed bank paybill mode uses bank account instead of unit code', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final base = container.read(tenantAccountProvider).seed;
+      final baseCompany = base.companies.first;
+      final updatedCompany = Company(
+        id: baseCompany.id,
+        slug: baseCompany.slug,
+        name: baseCompany.name,
+        kraPin: baseCompany.kraPin,
+        mpesaPaybill: '222111',
+        bankName: 'THE PHOENIX',
+        bankAccount: '404020',
+        settings: CompanySettings(
+          ledgerStartMonth: baseCompany.settings.ledgerStartMonth,
+          dueDay: baseCompany.settings.dueDay,
+          graceDay: baseCompany.settings.graceDay,
+          depositSchedule: baseCompany.settings.depositSchedule,
+          recordRetentionMonths: baseCompany.settings.recordRetentionMonths,
+          theme: baseCompany.settings.theme,
+          paybillAccountMode: 'bank',
+        ),
+        receiptSequence: baseCompany.receiptSequence,
+        repairTicketSequence: baseCompany.repairTicketSequence,
+        subscription: baseCompany.subscription,
+      );
+      final account = TenantAccountState.fromSeed(
+        BillingSeed(
+          asOf: base.asOf,
+          companies: [updatedCompany],
+          properties: base.properties,
+          units: base.units,
+          tenants: base.tenants,
+          tenancies: base.tenancies,
+          meterReadings: base.meterReadings,
+          payments: base.payments,
+          staff: base.staff,
+          repairTickets: base.repairTickets,
+          messages: base.messages,
+        ),
+      );
+      expect(account.usesFixedPaybillAccount, isTrue);
+      expect(account.effectiveMpesaPaybill, '222111');
+      expect(account.effectivePaybillAccountNumber, '404020');
+      expect(account.effectiveBankName, 'THE PHOENIX');
+      expect(account.effectiveBankAccount, '404020');
+    });
   });
 
   group('former tenant', () {

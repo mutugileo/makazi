@@ -11,14 +11,14 @@ import 'app_update_ui_state.dart';
 class AppUpdateNotifier extends Notifier<AppUpdateUiState> {
   /// Fallback version metadata when offline or in demo mode.
   /// Live production checks read from `public.app_releases` in Supabase.
-  static const String latestAppVersion = '1.0.13';
-  static const int latestAppBuildNumber = 13;
+  static const String latestAppVersion = '1.0.15';
+  static const int latestAppBuildNumber = 15;
 
   static const List<String> latestReleaseNotes = [
-    "Balances now match your landlord's records exactly",
-    'Your opening balance is shown on its own until the next billing cycle',
-    'Monthly charges start on the 4th of each month',
-    'Full payment history is counted in your balance',
+    'Updated billing payment details for faster, clearer rent transfers',
+    "Balances match your landlord's records exactly",
+    'Paste M-Pesa or bank confirmation messages to confirm payments faster',
+    'Edit or delete rejected payment confirmation messages',
   ];
 
   @override
@@ -33,7 +33,7 @@ class AppUpdateNotifier extends Notifier<AppUpdateUiState> {
         latestBuildNumber: latestAppBuildNumber,
         isUpdateAvailable: false,
         releaseNotes: latestReleaseNotes,
-        releaseDate: '25 Nov 2026',
+        releaseDate: '27 Nov 2026',
         priority: AppUpdatePriority.flexible,
       ),
     );
@@ -65,7 +65,7 @@ class AppUpdateNotifier extends Notifier<AppUpdateUiState> {
     var targetBuild = latestAppBuildNumber;
     var minSupportedBuild = 1;
     var notes = latestReleaseNotes;
-    var releaseDate = '25 Nov 2026';
+    var releaseDate = '27 Nov 2026';
     var storeUrl =
         'https://play.google.com/store/apps/details?id=com.codzure.makazi';
 
@@ -141,14 +141,17 @@ class AppUpdateNotifier extends Notifier<AppUpdateUiState> {
   }
 
   Future<bool> launchPlayStoreUpdate() async {
-    final marketUri = Uri.parse('market://details?id=com.codzure.makazi');
     final webUri = Uri.parse(state.updateInfo.playStoreUrl);
+    final isPlayStoreUrl = webUri.host.contains('play.google.com');
 
-    try {
-      if (await launchUrl(marketUri, mode: LaunchMode.externalApplication)) {
-        return true;
-      }
-    } catch (_) {}
+    if (isPlayStoreUrl) {
+      final marketUri = Uri.parse('market://details?id=com.codzure.makazi');
+      try {
+        if (await launchUrl(marketUri, mode: LaunchMode.externalApplication)) {
+          return true;
+        }
+      } catch (_) {}
+    }
 
     try {
       if (await launchUrl(webUri, mode: LaunchMode.externalApplication)) {
